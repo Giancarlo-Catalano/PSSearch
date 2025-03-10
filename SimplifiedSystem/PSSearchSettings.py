@@ -49,7 +49,7 @@ def get_default_search_settings() -> PSSearchSettings:
                             metrics="simplicity mean_fitness estimated_atomicity",
                             culling_method="biggest",
                             original_problem=None,
-                            proportion_used_that_should_be_unexplained=0.8,
+                            proportion_used_that_should_be_unexplained=0.5,
                             proportion_unexplained_that_needs_used=0.01,
                             verbose=True
                             )
