@@ -43,7 +43,7 @@ class DifferenceFromLinear(Metric):
     def set_solution(self, solution: EvaluatedFS):
         # this is where the heavy calculation goes
         self.solution = solution
-        self.local_pRef = LocalBivariateLinkageMetric.get_local_pRef(self.original_pRef, self.solution)
+        self.local_pRef = DifferenceFromLinear.get_local_pRef(self.original_pRef, self.solution)
         self.linkage_table = self.calculate_linkage_table()
 
     @classmethod

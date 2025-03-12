@@ -22,11 +22,13 @@ def get_fitness_file_name(data_folder: str, vector_size: int, clustering_method:
 
 
 def example_usage_for_read_data():
+    folder = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting"
     size = 20
+    method = "kmeans"
     fitness_column_to_use = 0
 
-    pRef = get_pRef_from_vectors(name_of_vectors_file=get_vectors_file_name(size),
-                                 name_of_fitness_file=get_fitness_file_name(size),
+    pRef = get_pRef_from_vectors(name_of_vectors_file=get_vectors_file_name(folder, size, method),
+                                 name_of_fitness_file=get_fitness_file_name(folder, size, method),
                                  column_in_fitness_file=fitness_column_to_use)
     best_solution = pRef.get_best_solution()
 
