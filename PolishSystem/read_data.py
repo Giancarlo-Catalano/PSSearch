@@ -14,11 +14,11 @@ def get_pRef_from_vectors(name_of_vectors_file: str, name_of_fitness_file: str, 
                 fitness_array=fitness_array,
                 search_space=search_space)
 
-def get_vectors_file_name(data_folder: str, size: int):
-    return os.path.join(data_folder, f"{size}\many_hot_vectors_{size}_kmeans.csv")
+def get_vectors_file_name(data_folder: str, vector_size: int, clustering_method: str) -> str:
+    return os.path.join(data_folder, f"many_hot_vectors_{vector_size}_{clustering_method}.csv")
 
-def get_fitness_file_name(data_folder: str, size: int):
-    return os.path.join(data_folder, f"{size}\\fitness_{size}_kmeans.csv")
+def get_fitness_file_name(data_folder: str, vector_size: int, clustering_method: str) -> str:
+    return os.path.join(data_folder, f"fitness_{vector_size}_{clustering_method}.csv")
 
 
 def example_usage_for_read_data():

@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from typing import Optional
 
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
-from Core.FullSolution import FullSolution
-from Core.PRef import PRef
-from Core.PS import PS
 
 
 @dataclass
@@ -39,8 +36,6 @@ class PSSearchSettings:
                    proportion_used_that_should_be_unexplained=d["proportion_used_that_should_be_unexplained"],
                    proportion_unexplained_that_needs_used=d["proportion_unexplained_that_needs_used"],
                    verbose=d["verbose"])
-
-
 
 
 def get_default_search_settings() -> PSSearchSettings:
