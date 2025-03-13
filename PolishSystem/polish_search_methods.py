@@ -21,7 +21,7 @@ def search_local_polish_ps(solution_to_explain: FullSolution,
                                       proportion_unexplained_that_needs_used=search_settings.proportion_unexplained_that_needs_used,
                                       proportion_used_that_should_be_unexplained=search_settings.proportion_used_that_should_be_unexplained,
                                       sampling_operator=search_settings.sampling_operator,
-                                    mutation_operator=search_settings.mutation_operator,
-                               crossover_operator=search_settings.crossover_operator,
+                                      mutation_operator=search_settings.mutation_operator,
+                                      crossover_operator=search_settings.crossover_operator,
 
                                       verbose=search_settings.verbose)
