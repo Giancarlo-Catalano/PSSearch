@@ -1,6 +1,8 @@
 from typing import Optional, Literal, Callable, TypeAlias
 
 import numpy as np
+from pymoo.operators.mutation.bitflip import BitflipMutation
+
 from SimplifiedSystem.Operators.Sampling import LocalPSGeometricSampling
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.soo.nonconvex.ga import GA
@@ -8,7 +10,7 @@ from pymoo.core.problem import Problem
 from pymoo.operators.crossover.sbx import SimulatedBinaryCrossover
 
 from Core.FullSolution import FullSolution
-from Core.PS import PS
+from Core.PS import PS, STAR
 from PolishSystem.PolishOperators import PolishLocalUniformPSMutation
 from SimplifiedSystem.ps_search_utils import apply_culling_method, \
     run_pymoo_algorithm_with_checks
@@ -22,6 +24,7 @@ PSObjective: TypeAlias = Callable[[PS], float]
 
 class PolishPSSearchTask(Problem):
     solution_to_explain: FullSolution
+    positions_of_search_space: np.ndarray
     unexplained_mask: np.ndarray
     proportion_unexplained_that_needs_used: float  # alpha
     proportion_used_that_should_be_unexplained: float  # beta
@@ -45,17 +48,18 @@ class PolishPSSearchTask(Problem):
                  proportion_unexplained_that_needs_used: float = 0.01,  # at least
                  proportion_used_that_should_be_unexplained: float = 0.5):  # at least
         self.solution_to_explain = solution_to_explain
+        self.positions_of_search_space = np.array([index for index, value in enumerate( solution_to_explain.values) if value == 1])
         self.objectives = objectives
         self.unexplained_mask = np.ones(shape=len(solution_to_explain),
                                         dtype=bool) if unexplained_mask is None else unexplained_mask
-        self.difference_variables = np.arange(len(self.unexplained_mask))[self.unexplained_mask]  # gets the indexes
+        self.difference_variables = [index for index in self.positions_of_search_space if self.unexplained_mask[index]]  # gets the indexes
 
         self.proportion_unexplained_that_needs_used = proportion_unexplained_that_needs_used
         self.proportion_used_that_should_be_unexplained = proportion_used_that_should_be_unexplained
 
         # then the stuff to satisfy pymoo
-        n_var = len(solution_to_explain.values)
-        lower_bounds = np.full(shape=n_var, fill_value=0)  # the stars
+        n_var = len(self.positions_of_search_space)
+        lower_bounds = np.zeros(shape=n_var, dtype=int)  # the stars
         upper_bounds = lower_bounds + 1
         super().__init__(n_var=n_var,
                          n_obj=len(self.objectives),
@@ -65,7 +69,10 @@ class PolishPSSearchTask(Problem):
                          vtype=bool)
 
     def individual_to_ps(self, x):
-        return PS(1 if x_value == 1 else -1 for x_value in x)  # false -> *, true -> 1
+        positions_with_ones = self.positions_of_search_space[x]  # only keep indices where x is true
+        result_values = np.full(fill_value=STAR, shape=len(self.solution_to_explain))
+        result_values[positions_with_ones] = 1
+        return PS(result_values)
 
     def get_which_rows_satisfy_constraint(self, X: np.ndarray) -> np.ndarray:
         # for a ps with some fixed variables, there are
@@ -77,17 +84,18 @@ class PolishPSSearchTask(Problem):
         #  (b) (H/U)% is how many of the unexplained variables are used, should be greater than proportion beta
         # -> H / U >= beta <=> H >= U * beta
 
-        f = np.sum(X, axis=1)
-        u = len(self.difference_variables)
-        h = np.sum(X[:, self.difference_variables], axis=1)
+        # f = np.sum(X, axis=1)
+        # u = len(self.difference_variables)
+        # h = np.sum(X[:, self.difference_variables], axis=1)
+        #
+        # threshold_h_A = f * self.proportion_used_that_should_be_unexplained
+        # threshold_h_B = u * self.proportion_unexplained_that_needs_used
+        #
+        # satisfies_A = h >= threshold_h_A
+        # satisfies_B = h >= threshold_h_B
 
-        threshold_h_A = f * self.proportion_used_that_should_be_unexplained
-        threshold_h_B = u * self.proportion_unexplained_that_needs_used
-
-        satisfies_A = h >= threshold_h_A
-        satisfies_B = h >= threshold_h_B
-
-        return np.logical_and(satisfies_A, satisfies_B)
+        #return np.logical_and(satisfies_A, satisfies_B)
+        return np.ones(X.shape[0])  # temporary
 
     def get_metrics_for_ps(self, ps: PS) -> list[float]:
         return [objective(ps) for objective in self.objectives]
@@ -97,8 +105,7 @@ class PolishPSSearchTask(Problem):
         metrics = np.array([self.get_metrics_for_ps(self.individual_to_ps(row)) for row in X])
         out["F"] = metrics
 
-        out["G"] = 0.5 - self.get_which_rows_satisfy_constraint(
-            X)  # if the constraint is satisfied, it is negative (which is counterintuitive)
+        out["G"] = 0.5 - self.get_which_rows_satisfy_constraint(X)  # if the constraint is satisfied, it is negative (which is counterintuitive)
 
 
 
@@ -128,7 +135,7 @@ def find_ps_in_polish_solution(to_explain: FullSolution,
     algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
                                                        sampling=LocalPSGeometricSampling(), #this can stay the same because it just makes booleans
                                                        crossover=SimulatedBinaryCrossover(prob=0.3), # idem con patate
-                                                       mutation=PolishLocalUniformPSMutation(solution_to_explain=to_explain),
+                                                       mutation=BitflipMutation(prob=1 / problem.n_var), # idem
                                                        eliminate_duplicates=True)
 
     pss = run_pymoo_algorithm_with_checks(pymoo_problem=problem,
