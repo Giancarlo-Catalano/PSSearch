@@ -138,8 +138,8 @@ def find_ps_in_problem(original_problem_search_space: SearchSpace,
     # the next line of code is a bit odd, but it works! It uses a GA if there is one objective
     algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
                                                        sampling=sampling_operator,
-                                                       crossover=mutation_operator,
-                                                       mutation=crossover_operator,
+                                                       crossover=crossover_operator,
+                                                       mutation=mutation_operator,
                                                        eliminate_duplicates=True)
 
     pss = run_pymoo_algorithm_with_checks(pymoo_problem=problem,
