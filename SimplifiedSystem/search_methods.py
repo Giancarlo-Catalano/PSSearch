@@ -40,6 +40,9 @@ def search_local_ps(solution_to_explain: FullSolution,
                                proportion_used_that_should_be_unexplained=search_settings.proportion_used_that_should_be_unexplained,
                                problem=search_settings.original_problem,
                                metrics=search_settings.metrics,
+                               sampling_operator=search_settings.sampling_operator,
+                               mutation_operator=search_settings.mutation_operator,
+                               crossover_operator=search_settings.crossover_operator,
                                verbose=search_settings.verbose)
 
 
@@ -59,4 +62,7 @@ def search_global_ps(original_problem_search_space: SearchSpace,
                               proportion_used_that_should_be_unexplained=search_settings.proportion_used_that_should_be_unexplained,
                               problem=search_settings.original_problem,
                               metrics=search_settings.metrics,
+                              sampling_operator=search_settings.sampling_operator,
+                              mutation_operator=search_settings.mutation_operator,
+                              crossover_operator=search_settings.crossover_operator,
                               verbose=search_settings.verbose)

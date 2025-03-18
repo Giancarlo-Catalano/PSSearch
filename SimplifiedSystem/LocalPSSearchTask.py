@@ -3,7 +3,10 @@ from typing import Optional, Literal, Callable, TypeAlias
 import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.soo.nonconvex.ga import GA
+from pymoo.core.crossover import Crossover
+from pymoo.core.mutation import Mutation
 from pymoo.core.problem import Problem
+from pymoo.core.sampling import Sampling
 from pymoo.operators.crossover.sbx import SimulatedBinaryCrossover
 from pymoo.operators.mutation.bitflip import BitflipMutation
 
@@ -99,7 +102,6 @@ class LocalPSSearchTask(Problem):
             X)  # if the constraint is satisfied, it is negative (which is counterintuitive)
 
 
-
 def find_ps_in_solution(to_explain: FullSolution,
                         pRef: PRef,
                         ps_budget: int,
@@ -110,7 +112,10 @@ def find_ps_in_solution(to_explain: FullSolution,
                         reattempts_when_fail: int = 1,
                         unexplained_mask: Optional[np.ndarray] = None,
                         problem: Optional[BenchmarkProblem] = None,
-                        metrics: str = "variance",
+                        metrics: str = "simplicity mean_fitness estimated_atomicity",
+                        sampling_operator: Optional[Sampling] = None,
+                        mutation_operator: Optional[Mutation] = None,
+                        crossover_operator: Optional[Crossover] = None,
                         verbose=True) -> list[PS]:
     objectives = construct_objectives_list(metrics, pRef, to_explain, problem)
 
@@ -124,11 +129,16 @@ def find_ps_in_solution(to_explain: FullSolution,
                                 proportion_unexplained_that_needs_used=proportion_unexplained_that_needs_used,
                                 proportion_used_that_should_be_unexplained=proportion_used_that_should_be_unexplained)
 
+    # if there are no operators given, we have these defaults
+    sampling_operator = LocalPSGeometricSampling() if sampling_operator is None else sampling_operator
+    crossover_operator = SimulatedBinaryCrossover(prob=0.3) if crossover_operator is None else crossover_operator
+    mutation_operator = BitflipMutation(prob=1 / problem.n_var) if mutation_operator is None else mutation_operator
+
     # the next line of code is a bit odd, but it works! It uses a GA if there is one objective
     algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
-                                                       sampling=LocalPSGeometricSampling(),
-                                                       crossover=SimulatedBinaryCrossover(prob=0.3),
-                                                       mutation=BitflipMutation(prob=1 / problem.n_var),
+                                                       sampling=sampling_operator,
+                                                       crossover=crossover_operator,
+                                                       mutation=mutation_operator,
                                                        eliminate_duplicates=True)
 
     pss = run_pymoo_algorithm_with_checks(pymoo_problem=problem,

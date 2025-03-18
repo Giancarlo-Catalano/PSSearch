@@ -324,8 +324,9 @@ class SolutionSpecificMutualInformation(Metric):
         else:
             return 0
 
+
 # use this one instead of the previous two
-class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,BivariateLinkage):
+class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation, BivariateLinkage):
 
     def __init__(self):
         super().__init__()
@@ -374,7 +375,6 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
                                    for var_a in range(len(cs))]
         return univariate_probabilities, bivariate_probabilities
 
-
     def calculate_probability_tables(self) -> (list, list):
 
         solution_matrix = self.pRef.full_solution_matrix
@@ -391,14 +391,13 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
         # ie global optima = size_of_pRef, global minima = 0 for a maximisation problem
         sample_size = self.pRef.sample_size
 
-
         def get_rank_of_fitness(fitness: float) -> float:
             # count the amount of times a fitness like this would win in a binary tournament, if there were (n*n-1) total tournaments
             normal_wins = np.sum(fitness_array < fitness)
             tie_break_wins = np.sum(fitness == fitness) / 2
             all_wins = float(normal_wins + tie_break_wins)
 
-            return all_wins ** 2
+            return all_wins
 
         def register_solution_for_univariate(solution: np.ndarray, rank: float):
             for var, value in enumerate(solution):
@@ -425,36 +424,3 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
                                     for var_b in range(len(cs))]
                                    for var_a in range(len(cs))]
         return univariate_probabilities, bivariate_probabilities
-
-    # def get_linkage_table_for_solution(self) -> np.ndarray:
-    #     #  this is temporary, TODO remove me
-    #     def get_linkage_between_vars(var_a: int, var_b: int) -> float:
-    #         ss = self.pRef.search_space
-    #         return max(self.mutual_information(var_a, value_a, var_b, value_b)
-    #                    for value_a in range(ss.cardinalities[var_a])
-    #                    for value_b in range(ss.cardinalities[var_b]))
-    #
-    #     n = self.pRef.search_space.amount_of_parameters
-    #     result = np.zeros(shape=(n, n), dtype=float)
-    #     for a, b in itertools.combinations(range(n), r=2):
-    #         result[a, b] = get_linkage_between_vars(a, b)
-    #
-    #     result += result.T
-    #
-    #     sums_of_linkages = np.sum(result, axis=0)
-    #     averages = sums_of_linkages / (n - 1)
-    #     np.fill_diagonal(result, averages)
-    #
-    #     return result
-
-
-    def get_linkage_threshold(self) -> float:
-        values_to_check = self.linkage_table[np.triu_indices(len(self.current_solution), 1)]
-        values_to_check = list(values_to_check)
-        values_to_check.sort()
-
-        differences = [(index, values_to_check[index] - values_to_check[index-1])
-                       for index in range(len(values_to_check)//2, len(values_to_check))]
-        best_index, best_difference = max(differences, key=utils.second)
-        return np.average(values_to_check[(best_index-1):(best_index+1)])
-

@@ -3,7 +3,10 @@ from typing import Optional, Literal, Callable, TypeAlias
 import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.soo.nonconvex.ga import GA
+from pymoo.core.crossover import Crossover
+from pymoo.core.mutation import Mutation
 from pymoo.core.problem import Problem
+from pymoo.core.sampling import Sampling
 
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
 from SimplifiedSystem.Operators.Crossover import GlobalPSUniformCrossover
@@ -110,6 +113,9 @@ def find_ps_in_problem(original_problem_search_space: SearchSpace,
                        unexplained_mask: Optional[np.ndarray] = None,
                        problem: Optional[BenchmarkProblem] = None,
                        metrics: str = "variance",
+                       sampling_operator: Optional[Sampling] = None,
+                       mutation_operator: Optional[Mutation] = None,
+                       crossover_operator: Optional[Crossover] = None,
                        verbose=True) -> list[PS]:
     objectives = construct_objectives_list(metrics_str=metrics, pRef=pRef, problem=problem)
 
@@ -124,11 +130,16 @@ def find_ps_in_problem(original_problem_search_space: SearchSpace,
         proportion_unexplained_that_needs_used=proportion_unexplained_that_needs_used,
         proportion_used_that_should_be_unexplained=proportion_used_that_should_be_unexplained)
 
+    # if there are no operators given, we have these defaults
+    sampling_operator = GlobalPSGeometricSampling() if sampling_operator is None else sampling_operator
+    crossover_operator = GlobalPSUniformCrossover(prob=0.3) if crossover_operator is None else crossover_operator
+    mutation_operator = GlobalPSUniformMutation(prob=1 / problem.n_var,search_space=original_problem_search_space) if mutation_operator is None else mutation_operator
+
     # the next line of code is a bit odd, but it works! It uses a GA if there is one objective
     algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
-                                                       sampling=GlobalPSGeometricSampling(),
-                                                       crossover=GlobalPSUniformCrossover(prob=0.3),  #
-                                                       mutation=GlobalPSUniformMutation(prob=1 / problem.n_var, search_space = original_problem_search_space),
+                                                       sampling=sampling_operator,
+                                                       crossover=crossover_operator,
+                                                       mutation=mutation_operator,
                                                        eliminate_duplicates=True)
 
     pss = run_pymoo_algorithm_with_checks(pymoo_problem=problem,
