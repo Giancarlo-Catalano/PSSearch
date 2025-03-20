@@ -85,7 +85,7 @@ class PSDecisionTreeLeafNode(PSDecisionTreeNode):
     def __init__(self,
                  prediction: float,
                  other_statistics: dict[str, float],
-                 fitnesses: np.ndarray):
+                 fitnesses: Optional[np.ndarray]):
         super().__init__(prediction=prediction, other_statistics=other_statistics, fitnesses=fitnesses)
 
     def __repr__(self):
@@ -101,7 +101,8 @@ class PSDecisionTreeLeafNode(PSDecisionTreeNode):
     def from_dict(cls, d: dict):
         assert (d["node_type"] == "leaf")
         return cls(prediction=d["prediction"],
-                   other_statistics=d["other_statistics"])
+                   other_statistics=d["other_statistics"],
+                   fitnesses=None)
 
     def get_node_text(self, custom_ps_repr: Callable, custom_partition_repr: Callable):
         # ps repr is ignored
@@ -117,7 +118,7 @@ class PSDecisionTreeBranchNode(PSDecisionTreeNode):
     def __init__(self,
                  prediction: float,
                  other_statistics: dict[str, float],
-                 fitnesses: np.ndarray):
+                 fitnesses: Optional[np.ndarray]):
         super().__init__(prediction=prediction, other_statistics=other_statistics, fitnesses=fitnesses)
         self.split_ps = None
 
@@ -185,7 +186,8 @@ class PSDecisionTreeBranchNode(PSDecisionTreeNode):
         assert (d["node_type"] == "branch")
 
         result_node = cls(prediction=d["prediction"],
-                          other_statistics=d["other_statistics"])
+                          other_statistics=d["other_statistics"],
+                          fitnesses=None)
         result_node.matching_branch = cls.get_node_from_dict(d["matching_branch"])
         result_node.not_matching_branch = cls.get_node_from_dict(d["not_matching_branch"])
         result_node.split_ps = PS(STAR if c == "*" else int(c) for c in d["split_ps"].split())
@@ -286,7 +288,7 @@ class PSDecisionTree(AbstractDecisionTreeRegressor):
 
     @classmethod
     def from_dict(cls, d: dict):
-        result = cls(maximum_depth=d["maximum_depth"], search_settings=get_default_search_settings())
+        result = cls(maximum_depth=d["maximum_depth"], search_settings = d["search_settings"])
         result.root_node = PSDecisionTreeBranchNode.get_node_from_dict(d["tree"]) if "tree" in d else None
         return result
 
@@ -300,28 +302,6 @@ class PSDecisionTree(AbstractDecisionTreeRegressor):
         with utils.open_and_make_directories(filename) as file:
             data = self.as_dict()
             json.dump(data, file, indent=4)
-
-    def with_permutation(self, permutation: list[int]):
-        def permute_ps(ps: PS) -> PS:
-            return PS(ps.values[permutation])
-
-        def permute_node(node: PSDecisionTreeNode) -> PSDecisionTreeNode:
-            if isinstance(node, PSDecisionTreeBranchNode):
-                result = PSDecisionTreeBranchNode(prediction=node.prediction,
-                                                  other_statistics=node.other_statistics)
-                result.split_ps = permute_ps(node.split_ps)
-                result.matching_branch = permute_node(node.matching_branch)
-                result.not_matching_branch = permute_node(node.not_matching_branch)
-                return result
-            else:
-                return node
-
-        result = PSDecisionTree(maximum_depth=self.maximum_depth)
-        result.root_node = permute_node(self.root_node)
-        result.search_settings = self.search_settings
-        result.problem = None  # this needs to be set somewhere else, since the problem will be different
-        return result
-
 
     def print_ASCII(self,
                     show_not_matching_nodes: bool = True,
@@ -350,3 +330,16 @@ class PSDecisionTree(AbstractDecisionTreeRegressor):
             # For any additional lines, print them with an indentation that matches the node's position.
             for line in lines[1:]:
                 print(f"{fill}{line}")
+
+
+    def post_hoc_set_fitnesses(self, pRef: PRef):
+        def recursively_set_fitnesses(node, pRef_to_split: PRef):
+            node.fitnesses = pRef_to_split.fitness_array
+            if isinstance(node, PSDecisionTreeBranchNode):
+                matching_indexes = pRef_to_split.get_indexes_matching_ps(node.split_ps)
+                matching_pRef, not_matching_pRef = pRef_to_split.split_by_indexes(matching_indexes)
+
+                recursively_set_fitnesses(node.matching_branch, matching_pRef)
+                recursively_set_fitnesses(node.not_matching_branch, not_matching_pRef)
+
+        recursively_set_fitnesses(self.root_node, pRef)
