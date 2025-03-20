@@ -15,6 +15,7 @@ from Core.PSMetric.FitnessQuality.SignificantlyHighAverage import MannWhitneyU
 from Core.PSMetric.FitnessQuality.SplitVariance import SplitVariance
 from Core.PSMetric.Linkage.TraditionalPerturbationLinkage import TraditionalPerturbationLinkage
 from Core.PSMetric.Linkage.ValueSpecificMutualInformation import FasterSolutionSpecificMutualInformation
+from Core.PSMetric.SampleCount import SampleCount
 from Core.SearchSpace import SearchSpace
 from SimplifiedSystem.filter_ps import keep_biggest, merge_pss_into_one, keep_middle, keep_with_best_atomicity
 
@@ -53,6 +54,7 @@ def get_metric_function(metric_name: str,
         estimated_atomicity_metric.set_pRef(pRef)
         estimated_atomicity_metric.set_solution(solution)
 
+
         return with_inverted_sign(estimated_atomicity_metric.get_atomicity)
 
     if metric_name == "estimated_atomicity&evaluator":
@@ -71,6 +73,11 @@ def get_metric_function(metric_name: str,
     if metric_name == "variance":
         variance_evaluator = SplitVariance(pRef)
         return variance_evaluator.get_single_score
+
+    if metric_name == "sample_count":
+        count_evaluator = SampleCount()
+        count_evaluator.set_pRef(pRef)
+        return with_inverted_sign(count_evaluator.get_single_score)
 
     return None
 

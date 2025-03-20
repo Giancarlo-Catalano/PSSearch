@@ -424,3 +424,6 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
                                     for var_b in range(len(cs))]
                                    for var_a in range(len(cs))]
         return univariate_probabilities, bivariate_probabilities
+
+
+
