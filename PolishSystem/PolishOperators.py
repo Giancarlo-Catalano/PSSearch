@@ -9,7 +9,7 @@ from pymoo.operators.sampling.rnd import FloatRandomSampling
 
 from Core.FullSolution import FullSolution
 from Core.SearchSpace import SearchSpace
-from PolishSystem.PolishPSSearchTask import PolishPSSearchTask
+from PolishSystem.PolishPSSearchTask import LocalPSPolishSearchTask
 
 Embedding = np.ndarray
 
@@ -17,12 +17,12 @@ Embedding = np.ndarray
 class OnlyIfCloseEnoughCrossover(Crossover):
     # this is skeleton code to implement the crossover operator discussed on 13/3/25.
 
-    pymoo_problem: PolishPSSearchTask  # this is needed to convert the pymoo individuals into PSs
+    pymoo_problem: LocalPSPolishSearchTask  # this is needed to convert the pymoo individuals into PSs
     embedding_model: Any  # this will be needed to convert PSs into embeddings
     distance_threshold: float
 
     def __init__(self,
-                 pymoo_problem: PolishPSSearchTask,
+                 pymoo_problem: LocalPSPolishSearchTask,
                  embedding_model: Any,
                  distance_threshold: float,
                  n_offsprings=2,
