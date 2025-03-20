@@ -33,7 +33,7 @@ class PolishPSDecisionTree(PSDecisionTree):
             node = PSDecisionTreeBranchNode.from_pRef(pRef_to_split)
 
             # this is where we search for the PS
-            objectives = self.get_objectives_for_partition(pRef)
+            objectives = self.get_objectives_for_partition(pRef_to_split)
             splitting_pss = search_global_polish_ps(original_problem_search_space=pRef_to_split.search_space,
                                                     search_settings=self.search_settings,
                                                     objectives=objectives)
