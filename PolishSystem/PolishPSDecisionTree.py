@@ -35,8 +35,8 @@ class PolishPSDecisionTree(PSDecisionTree):
             # this is where we search for the PS
             objectives = self.get_objectives_for_partition(pRef)
             splitting_pss = search_global_polish_ps(original_problem_search_space=pRef_to_split.search_space,
-                                                   search_settings=self.search_settings,
-                                                   objectives=objectives)
+                                                    search_settings=self.search_settings,
+                                                    objectives=objectives)
 
             splitting_ps = splitting_pss[0]
 
@@ -49,11 +49,14 @@ class PolishPSDecisionTree(PSDecisionTree):
             matching_indexes = pRef_to_split.get_indexes_matching_ps(splitting_ps)
             matching_pRef, not_matching_pRef = pRef_to_split.split_by_indexes(matching_indexes)
 
+
             node.matching_branch = recursively_train_node(pRef_to_split=matching_pRef,
                                                           current_depth=current_depth + 1)
 
             node.not_matching_branch = recursively_train_node(pRef_to_split=not_matching_pRef,
                                                               current_depth=current_depth + 1)
+            node.matching_branch.fitnesses = matching_pRef.fitness_array
+            node.not_matching_branch.fitnesses = not_matching_pRef.fitness_array
 
             return node
 

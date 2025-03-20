@@ -16,19 +16,22 @@ from SimplifiedSystem.LocalPSSearchTask import find_ps_in_solution
 
 import anytree
 
-from SimplifiedSystem.PSSearchSettings import PSSearchSettings
+from SimplifiedSystem.PSSearchSettings import PSSearchSettings, get_default_search_settings
 
 
 class PSDecisionTreeNode:
     prediction: float
 
     other_statistics: dict[str, float]
+    fitnesses: Optional[np.ndarray]
 
     def __init__(self,
                  prediction: float,
-                 other_statistics: dict[str, float]):
+                 other_statistics: dict[str, float],
+                 fitnesses : Optional[np.ndarray] = None):
         self.prediction = prediction
         self.other_statistics = other_statistics
+        self.fitnesses = fitnesses
 
     @classmethod
     def get_statistics_from_pRef(cls, pRef: PRef) -> dict[str, float]:
@@ -64,7 +67,7 @@ class PSDecisionTreeNode:
     def from_pRef(cls, pRef: PRef):
         stats = PSDecisionTreeLeafNode.get_statistics_from_pRef(pRef)
         prediction = stats.get("average", float('nan'))
-        return cls(prediction=prediction, other_statistics=stats)
+        return cls(prediction=prediction, other_statistics=stats, fitnesses=pRef.fitness_array)
 
     def repr_custom(self, custom_ps_repr, custom_prop_repr) -> str:
         raise NotImplemented
@@ -78,14 +81,12 @@ class PSDecisionTreeNode:
         raise NotImplemented
 
 
-
-
-
 class PSDecisionTreeLeafNode(PSDecisionTreeNode):
     def __init__(self,
                  prediction: float,
-                 other_statistics: dict[str, float]):
-        super().__init__(prediction=prediction, other_statistics=other_statistics)
+                 other_statistics: dict[str, float],
+                 fitnesses: np.ndarray):
+        super().__init__(prediction=prediction, other_statistics=other_statistics, fitnesses=fitnesses)
 
     def __repr__(self):
         return f"LeafNode(prediction = {self.prediction:.2f})"
@@ -115,8 +116,9 @@ class PSDecisionTreeBranchNode(PSDecisionTreeNode):
 
     def __init__(self,
                  prediction: float,
-                 other_statistics: dict[str, float]):
-        super().__init__(prediction=prediction, other_statistics=other_statistics)
+                 other_statistics: dict[str, float],
+                 fitnesses: np.ndarray):
+        super().__init__(prediction=prediction, other_statistics=other_statistics, fitnesses=fitnesses)
         self.split_ps = None
 
         self.matching_branch = None
@@ -225,11 +227,14 @@ class PSDecisionTree(AbstractDecisionTreeRegressor):
             matching_indexes = pRef_to_split.get_indexes_matching_ps(splitting_ps)
             matching_pRef, not_matching_pRef = pRef_to_split.split_by_indexes(matching_indexes)
 
+
             node.matching_branch = recursively_train_node(pRef_to_split=matching_pRef,
                                                           current_depth=current_depth + 1)
 
             node.not_matching_branch = recursively_train_node(pRef_to_split=not_matching_pRef,
                                                               current_depth=current_depth + 1)
+            node.matching_branch.fitnesses = matching_pRef.fitness_array
+            node.not_matching_branch.fitnesses = not_matching_pRef.fitness_array
 
             return node
 
@@ -281,7 +286,7 @@ class PSDecisionTree(AbstractDecisionTreeRegressor):
 
     @classmethod
     def from_dict(cls, d: dict):
-        result = cls(maximum_depth=d["maximum_depth"])
+        result = cls(maximum_depth=d["maximum_depth"], search_settings=get_default_search_settings())
         result.root_node = PSDecisionTreeBranchNode.get_node_from_dict(d["tree"]) if "tree" in d else None
         return result
 
