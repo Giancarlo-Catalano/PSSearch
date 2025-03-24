@@ -3,7 +3,7 @@ from Core.FullSolution import FullSolution
 from Core.PRef import PRef
 from Core.PS import PS
 from Core.SearchSpace import SearchSpace
-from utils import announce
+from utils_ import announce
 
 
 class BenchmarkProblem:

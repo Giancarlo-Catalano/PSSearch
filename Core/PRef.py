@@ -5,7 +5,7 @@ from typing import Iterable, Callable, Any
 import numpy as np
 from matplotlib import pyplot as plt
 
-import utils
+import utils_
 from Core.EvaluatedFS import EvaluatedFS
 from Core.FullSolution import FullSolution
 from Core.PS import STAR, PS
@@ -107,7 +107,7 @@ class PRef:
     @classmethod
     def from_evaluated_full_solutions(cls, evaluated_fss: Iterable[EvaluatedFS],
                                       search_space: SearchSpace):
-        fss, fitnesses = utils.unzip([(e_fs, e_fs.fitness) for e_fs in evaluated_fss])
+        fss, fitnesses = utils_.unzip([(e_fs, e_fs.fitness) for e_fs in evaluated_fss])
         return cls.from_full_solutions(fss, fitnesses, search_space)
 
     @classmethod
@@ -175,7 +175,7 @@ class PRef:
         return len(self.fitness_array)
 
     def get_with_normalised_fitnesses(self):
-        normalised_fitnesses = utils.remap_array_in_zero_one(self.fitness_array)
+        normalised_fitnesses = utils_.remap_array_in_zero_one(self.fitness_array)
         return PRef(fitness_array=normalised_fitnesses,  # this is the only thing that changes
                     full_solution_matrix=self.full_solution_matrix,
                     search_space=self.search_space)
@@ -202,7 +202,7 @@ class PRef:
 
     def save(self, file, verbose=False):
         # create the folder if it doesn't exist
-        utils.make_folder_if_not_present(file)
+        utils_.make_folder_if_not_present(file)
         np.savez(file,
                  fsm=self.full_solution_matrix,
                  fitness_array=self.fitness_array,
@@ -251,7 +251,7 @@ class PRef:
 
     def get_top_n_solutions(self, n: int) -> list[EvaluatedFS]:
         indexes_and_fitnesses = list(enumerate(self.fitness_array))
-        best_indexes_and_fitnesses = heapq.nlargest(n=n, iterable=indexes_and_fitnesses, key=utils.second)
+        best_indexes_and_fitnesses = heapq.nlargest(n=n, iterable=indexes_and_fitnesses, key=utils_.second)
 
         return [self.get_nth_solution(index) for index, _ in best_indexes_and_fitnesses]
 
@@ -260,7 +260,7 @@ class PRef:
         return self.get_nth_solution(best_index)
 
     def get_sorted(self, reverse = True) -> Any:  # returns a pRef
-        enumerated_fitnesses = sorted(enumerate(self.fitness_array), key=utils.second, reverse=reverse)
+        enumerated_fitnesses = sorted(enumerate(self.fitness_array), key=utils_.second, reverse=reverse)
         new_indexes, new_fitnesses = zip(*enumerated_fitnesses)
         new_indexes = np.array(new_indexes) ## otherwise the indexing doesn't work??
         new_fitnesses = np.array(new_fitnesses)
@@ -294,7 +294,7 @@ class PRef:
 
 
 def plot_solutions_in_pRef(pRef: PRef, filename: str):
-    x_points, y_points = utils.unzip(list(enumerate(pRef.fitness_array)))
+    x_points, y_points = utils_.unzip(list(enumerate(pRef.fitness_array)))
     fig = plt.figure()
     plt.plot(x_points, y_points)
     plt.show()

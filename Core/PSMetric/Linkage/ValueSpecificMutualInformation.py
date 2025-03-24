@@ -151,6 +151,37 @@ class ValueSpecificMutualInformation(Metric):
 
         return result
 
+    def get_atomicity(self, ps: PS) -> float:
+        fixed_vars = ps.get_fixed_variable_positions()
+
+        def weakest_internal_linkage_for(var) -> float:
+            return min(self.linkage_table[var, other] for other in fixed_vars if other != var)
+
+        if len(fixed_vars) > 1:
+            weakest_links = np.array([weakest_internal_linkage_for(var) for var in fixed_vars])
+            return np.average(weakest_links)
+        elif len(fixed_vars) == 1:
+            var = fixed_vars[0]
+            return self.linkage_table[var, var]
+        else:
+            return 0
+
+    def get_dependence(self, ps: PS) -> float:
+        fixed_vars = ps.get_fixed_variable_positions()
+        unfixed_vars = [index for index, val in enumerate(ps.values) if val == STAR]
+
+        def strongest_external_linkage_for(var) -> float:
+            return max(self.linkage_table[var, other] for other in unfixed_vars)
+
+        if (len(unfixed_vars) > 0) and (len(fixed_vars) > 0):  # maybe this should be zero?
+            strongest_links = np.array([strongest_external_linkage_for(var) for var in fixed_vars])
+            return np.average(strongest_links)
+        elif len(fixed_vars) == 1:
+            var = fixed_vars[0]
+            return strongest_external_linkage_for(var)
+        else:
+            return 0
+
 
 class SolutionSpecificMutualInformation(Metric):
     pRef: Optional[PRef]
