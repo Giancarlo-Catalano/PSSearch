@@ -4,8 +4,8 @@ from Core.FullSolution import FullSolution
 from Core.PRef import PRef
 from Core.PS import PS
 from Core.SearchSpace import SearchSpace
+from PolishSystem.GlobalPSPolishSearch import find_ps_in_polish_problem
 
-from PolishSystem.GlovalPSPolishSearchTask import find_ps_in_polish_problem
 from PolishSystem.LocalPSPolishSearchTask import find_ps_in_polish_solution
 from SimplifiedSystem.GlobalPSSearchTask import find_ps_in_problem
 from SimplifiedSystem.PSSearchSettings import PSSearchSettings
@@ -49,4 +49,5 @@ def search_global_polish_ps(original_problem_search_space: SearchSpace,
                                      sampling_operator=search_settings.sampling_operator,
                                      mutation_operator=search_settings.mutation_operator,
                                      crossover_operator=search_settings.crossover_operator,
+                                     niching_operator=search_settings.niching_operator,
                                      verbose=search_settings.verbose)

@@ -4,6 +4,7 @@ from typing import Optional
 from pymoo.core.crossover import Crossover
 from pymoo.core.mutation import Mutation
 from pymoo.core.sampling import Sampling
+from pymoo.core.survival import Survival
 
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
 
@@ -26,10 +27,12 @@ class PSSearchSettings:
     crossover_operator_name: Optional[str] = None
     mutation_operator_name: Optional[str] = None
     sampling_operator_name: Optional[str] = None
+    niching_operator_name: Optional[str] = None
 
     crossover_operator: Optional[Crossover] = None
     mutation_operator: Optional[Mutation] = None
     sampling_operator: Optional[Sampling] = None
+    niching_operator: Optional[Survival] = None
 
     def as_dict(self):
 
@@ -43,10 +46,12 @@ class PSSearchSettings:
                 "crossover": self.crossover_operator_name,
                 "mutation": self.mutation_operator_name,
                 "sampling": self.sampling_operator_name,
+                "niching": self.niching_operator,
                 "verbose": self.verbose}
 
     @classmethod
     def from_dict(cls, d: dict):
+        # this is broken, do not use
         return cls(ps_search_budget=d["ps_search_budget"],
                    ps_search_population=d["ps_search_population"],
                    ps_n_generations=d["ps_n_generations"],

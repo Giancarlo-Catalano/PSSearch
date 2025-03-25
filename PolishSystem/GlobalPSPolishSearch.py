@@ -7,10 +7,13 @@ from pymoo.core.crossover import Crossover
 from pymoo.core.mutation import Mutation
 from pymoo.core.problem import Problem
 from pymoo.core.sampling import Sampling
+from pymoo.core.survival import Survival
 from pymoo.operators.crossover.sbx import SimulatedBinaryCrossover
 from pymoo.operators.mutation.bitflip import BitflipMutation
+from pymoo.operators.survival.rank_and_crowding import RankAndCrowding
 
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
+from Niching.NichingOperators import AverageToeSteppingNiching
 from SimplifiedSystem.Operators.Crossover import GlobalPSUniformCrossover
 from SimplifiedSystem.Operators.Mutation import GlobalPSUniformMutation
 from SimplifiedSystem.Operators.Sampling import GlobalPSGeometricSampling, LocalPSGeometricSampling
@@ -121,6 +124,7 @@ def find_ps_in_polish_problem(original_problem_search_space: SearchSpace,
                               sampling_operator: Optional[Sampling] = None,
                               mutation_operator: Optional[Mutation] = None,
                               crossover_operator: Optional[Crossover] = None,
+                              niching_operator: Optional[Survival] = None,
                               verbose=True) -> list[PS]:
     if len(objectives) == 0:
         raise Exception("Somehow there are no objectives")
@@ -138,11 +142,14 @@ def find_ps_in_polish_problem(original_problem_search_space: SearchSpace,
     crossover_operator = SimulatedBinaryCrossover(prob=0.3) if crossover_operator is None else crossover_operator
     mutation_operator = BitflipMutation(prob=1 / problem.n_var) if mutation_operator is None else mutation_operator
 
+    niching_operator = RankAndCrowding() if niching_operator is None else niching_operator
+
     # the next line of code is a bit odd, but it works! It uses a GA if there is one objective
     algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
                                                        sampling=sampling_operator,
                                                        crossover=crossover_operator,
                                                        mutation=mutation_operator,
+                                                       survival = niching_operator,
                                                        eliminate_duplicates=True)
 
     pss = run_pymoo_algorithm_with_checks(pymoo_problem=problem,
