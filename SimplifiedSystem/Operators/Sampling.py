@@ -27,7 +27,7 @@ class GlobalPSGeometricSampling(FloatRandomSampling):
         chance_of_success = 0.79
         while random.random() < chance_of_success:
             var_index = random.randrange(n)
-            new_value = random.randrange(int(xu[var_index]) + 1)
+            new_value = random.randrange(int(xu[var_index]))
             result_values[var_index] = new_value
         return result_values
 

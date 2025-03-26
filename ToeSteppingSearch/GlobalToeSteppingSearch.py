@@ -1,3 +1,4 @@
+
 from typing import Optional, Literal, Callable, TypeAlias
 
 import numpy as np
@@ -9,20 +10,38 @@ from pymoo.core.problem import Problem
 from pymoo.core.sampling import Sampling
 
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
+from Core.PRef import PRef
+from Core.PS import PS
+from Core.SearchSpace import SearchSpace
+from SimplifiedSystem.GlobalPSSearchTask import GlobalPSSearchTask
 from SimplifiedSystem.Operators.Crossover import GlobalPSUniformCrossover
 from SimplifiedSystem.Operators.Mutation import GlobalPSUniformMutation
 from SimplifiedSystem.Operators.Sampling import GlobalPSGeometricSampling
-from SimplifiedSystem.ps_search_utils import construct_objectives_list, apply_culling_method, \
+from SimplifiedSystem.ps_search_utils import apply_culling_method, \
     run_pymoo_algorithm_with_checks
-from Core.PRef import PRef
-from Core.PS import PS, STAR
-from Core.PSMetric.FitnessQuality.SignificantlyHighAverage import MannWhitneyU
-from Core.SearchSpace import SearchSpace
 
 PSObjective: TypeAlias = Callable[[PS], float]
 
 
-class GlobalPSSearchTask(Problem):
+class ToeStepCounterEvaluator:
+    pRef: PRef
+
+    def __init__(self, pRef: PRef):
+        self.pRef = pRef
+
+
+    def get_average_toesteps(self, pss: list[PS]):
+        counts_per_session = np.zeros(self.pRef.sample_size)
+        matching_indexes = [self.pRef.get_indexes_matching_ps(ps) for ps in pss]
+        for mi in matching_indexes:
+            counts_per_session[mi] += 1
+
+        worst_value = 666 # len(pss)
+        return [np.average(counts_per_session[mi]) if len(mi) > 0 else worst_value
+                for mi in matching_indexes]
+
+class GlobalToeSteppingPSSearchTask(Problem):
+    toe_step_counter: ToeStepCounterEvaluator
     unexplained_mask: np.ndarray
     proportion_unexplained_that_needs_used: float  # alpha
     proportion_used_that_should_be_unexplained: float  # beta
@@ -42,11 +61,13 @@ class GlobalPSSearchTask(Problem):
     def __init__(self,
                  original_problem_search_space: SearchSpace,
                  objectives: list[Callable],
+                 pRef: PRef,
                  unexplained_mask: Optional[np.ndarray] = None,
                  proportion_unexplained_that_needs_used: float = 0.01,  # at least
                  proportion_used_that_should_be_unexplained: float = 0.5):  # at least
         self.original_problem_search_space = original_problem_search_space
         self.objectives = objectives
+        self.toe_step_counter = ToeStepCounterEvaluator(pRef)
         self.unexplained_mask = np.ones(shape=self.original_problem_search_space.amount_of_parameters,
                                         dtype=bool) if unexplained_mask is None else unexplained_mask
         self.difference_variables = np.arange(len(self.unexplained_mask))[self.unexplained_mask]  # gets the indexes
@@ -59,25 +80,25 @@ class GlobalPSSearchTask(Problem):
         lower_bounds = np.full(shape=n_var, fill_value=-1)  # the stars
         upper_bounds = self.original_problem_search_space.cardinalities  ## the bounds are not inclusive
         super().__init__(n_var=n_var,
-                         n_obj=len(self.objectives),
+                         n_obj=len(self.objectives)+1, # note this
                          n_ieq_constr=1,
                          xl=lower_bounds,
                          xu=upper_bounds,
                          vtype=int)
 
     def individual_to_ps(self, x):
-        return PS(x)  # TODO check
+        return PS(x)  # since we encode the raw values
 
     def get_which_rows_satisfy_constraint(self, X: np.ndarray) -> np.ndarray:
-        # # for a ps with some fixed variables, there are
-        # #  F which are used in the PS
-        # #  U is the amount of unexplained variables
-        # #  H which are unexplained and used in the PS
-        # #  (a) (H/F)% is how many of the used variables are unexplained, should be greater than proportion alpha
-        # # -> H / F >= alpha <=> H >= F * alpha
-        # #  (b) (H/U)% is how many of the unexplained variables are used, should be greater than proportion beta
-        # # -> H / U >= beta <=> H >= U * beta
-        #
+        # for a ps with some fixed variables, there are
+        #  F which are used in the PS
+        #  U is the amount of unexplained variables
+        #  H which are unexplained and used in the PS
+        #  (a) (H/F)% is how many of the used variables are unexplained, should be greater than proportion alpha
+        # -> H / F >= alpha <=> H >= F * alpha
+        #  (b) (H/U)% is how many of the unexplained variables are used, should be greater than proportion beta
+        # -> H / U >= beta <=> H >= U * beta
+
         # f = np.sum(X != -1, axis=1)  # check
         # u = len(self.difference_variables)
         # h = np.sum(X[:, self.difference_variables], axis=1)
@@ -87,9 +108,8 @@ class GlobalPSSearchTask(Problem):
         #
         # satisfies_A = h >= threshold_h_A
         # satisfies_B = h >= threshold_h_B
-        #
-        # return np.logical_and(satisfies_A, satisfies_B)
 
+        #return np.logical_and(satisfies_A, satisfies_B)
         return np.ones(X.shape[0])
 
     def get_metrics_for_ps(self, ps: PS) -> list[float]:
@@ -97,15 +117,20 @@ class GlobalPSSearchTask(Problem):
 
     def _evaluate(self, X, out, *args, **kwargs):
         """ I believe that since this class inherits from Problem, x should be a group of solutions, and not just one"""
+        pss = [self.individual_to_ps(row) for row in X]
+        toesteps = np.array(self.toe_step_counter.get_average_toesteps(pss)).reshape((-1, 1))
+
         metrics = np.array([self.get_metrics_for_ps(self.individual_to_ps(row)) for row in X])
+        metrics = np.hstack((metrics, toesteps))
         out["F"] = metrics
 
         out["G"] = 0.5 - self.get_which_rows_satisfy_constraint(
             X)  # if the constraint is satisfied, it is negative (which is counterintuitive)
 
 
-def find_ps_in_problem(original_problem_search_space: SearchSpace,
+def find_ps_in_problem_with_toe_steps(original_problem_search_space: SearchSpace,
                        pRef: PRef,
+                       objectives: list[Callable],
                        ps_budget: int,
                        population_size: int = 100,
                        proportion_unexplained_that_needs_used: float = 0.01,
@@ -114,19 +139,20 @@ def find_ps_in_problem(original_problem_search_space: SearchSpace,
                        reattempts_when_fail: int = 1,
                        unexplained_mask: Optional[np.ndarray] = None,
                        problem: Optional[BenchmarkProblem] = None,
-                       metrics: str = "variance",
+
                        sampling_operator: Optional[Sampling] = None,
                        mutation_operator: Optional[Mutation] = None,
                        crossover_operator: Optional[Crossover] = None,
                        verbose=True) -> list[PS]:
-    objectives = construct_objectives_list(metrics_str=metrics, pRef=pRef, problem=problem)
+
 
     if len(objectives) == 0:
         raise Exception("Somehow there are no objectives")
 
     # construct the optimisation problem instance
-    problem = GlobalPSSearchTask(
+    problem = GlobalToeSteppingPSSearchTask(
         original_problem_search_space=original_problem_search_space,
+        pRef = pRef,
         objectives=objectives,
         unexplained_mask=unexplained_mask,
         proportion_unexplained_that_needs_used=proportion_unexplained_that_needs_used,
@@ -137,8 +163,7 @@ def find_ps_in_problem(original_problem_search_space: SearchSpace,
     crossover_operator = GlobalPSUniformCrossover(prob=0.3) if crossover_operator is None else crossover_operator
     mutation_operator = GlobalPSUniformMutation(prob=1 / problem.n_var,search_space=original_problem_search_space) if mutation_operator is None else mutation_operator
 
-    # the next line of code is a bit odd, but it works! It uses a GA if there is one objective
-    algorithm = (GA if len(objectives) < 2 else NSGA2)(pop_size=population_size,
+    algorithm = NSGA2(pop_size=population_size,
                                                        sampling=sampling_operator,
                                                        crossover=crossover_operator,
                                                        mutation=mutation_operator,
