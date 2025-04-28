@@ -33,7 +33,7 @@ class AbstractDecisionTreeRegressor:
         return mean_squared_error(actual_values, predictions)
 
     def get_error_metrics(self, test_pRef) -> dict:
-        predictions = self.get_predictions(test_pRef.full_solution_matrix)
+        predictions = self.get_predictions(test_pRef.inverted_fsm)
         ground_truth = test_pRef.fitness_array
 
         mse = mean_squared_error(ground_truth, predictions)

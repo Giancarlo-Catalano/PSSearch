@@ -105,30 +105,35 @@ class TraditionalPerturbationLinkage(Metric):
         return linkage_table
 
     def get_atomicity(self, ps: PS) -> float:
-        if ps.fixed_count() < 2:
-            return 0.0
+        fixed_vars = ps.get_fixed_variable_positions()
 
-        linkages = [self.linkage_table[var_a, var_b]
-                    for var_a, var_b in itertools.combinations(range(self.n), r=2)
-                    if ps[var_a] != STAR
-                    if ps[var_b] != STAR]
+        def weakest_internal_linkage_for(var) -> float:
+            return min(self.linkage_table[var, other] for other in fixed_vars if other != var)
 
-        return np.average(linkages)
+        if len(fixed_vars) > 1:
+            weakest_links = np.array([weakest_internal_linkage_for(var) for var in fixed_vars])
+            return np.average(weakest_links)
+        elif len(fixed_vars) == 1:
+            var = fixed_vars[0]
+            return self.linkage_table[var, var]
+        else:
+            return 0
 
     def get_dependence(self, ps: PS) -> float:
-        if self.n - ps.fixed_count() < 1:
-            return 0.0
+        fixed_vars = ps.get_fixed_variable_positions()
+        unfixed_vars = [index for index, val in enumerate(ps.values) if val == STAR]
 
-        if ps.fixed_count() < 1:
-            return 0.0
+        def strongest_external_linkage_for(var) -> float:
+            return max(self.linkage_table[var, other] for other in unfixed_vars)
 
-        linkages = [self.linkage_table[var_a, var_b]
-                    for var_a in range(self.n)
-                    for var_b in range(self.n)
-                    if ps[var_a] != STAR
-                    if ps[var_b] != STAR]
-
-        return np.average(linkages)
+        if (len(unfixed_vars) > 0) and (len(fixed_vars) > 0):  # maybe this should be zero?
+            strongest_links = np.array([strongest_external_linkage_for(var) for var in fixed_vars])
+            return np.average(strongest_links)
+        elif len(fixed_vars) == 1:
+            var = fixed_vars[0]
+            return strongest_external_linkage_for(var)
+        else:
+            return 0
     def get_table_for_ps(self, ps: PS) -> np.ndarray:
         fixed_vars = ps.get_fixed_variable_positions()
         return self.linkage_table[fixed_vars, :][:, fixed_vars]

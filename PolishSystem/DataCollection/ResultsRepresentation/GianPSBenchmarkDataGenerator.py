@@ -1,7 +1,6 @@
 from typing import Optional
 
 import numpy as np
-from datasets import Dataset
 
 import utils
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem

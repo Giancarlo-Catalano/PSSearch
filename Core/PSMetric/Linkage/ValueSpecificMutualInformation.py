@@ -337,7 +337,7 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
 
     def calculate_probability_tables_old(self) -> (list, list):
 
-        solution_matrix = self.pRef.get_sorted(reverse=False).full_solution_matrix
+        solution_matrix = self.pRef.get_sorted(reverse=False).inverted_fsm
 
         ss = self.pRef.search_space
         cs = ss.cardinalities
