@@ -394,7 +394,7 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
         def get_rank_of_fitness(fitness: float) -> float:
             # count the amount of times a fitness like this would win in a binary tournament, if there were (n*n-1) total tournaments
             normal_wins = np.sum(fitness_array < fitness)
-            tie_break_wins = np.sum(fitness == fitness) / 2
+            tie_break_wins = np.sum(fitness == fitness) / 2  # TODO is this meant to be pRef.fitness_array == fitness
             all_wins = float(normal_wins + tie_break_wins)
 
             return all_wins

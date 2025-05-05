@@ -611,3 +611,42 @@ def shuffled(original: Iterable) -> list:
     result = list(original)
     random.shuffle(result)
     return result
+
+
+from matplotlib import pyplot as plt
+from typing import Optional
+import seaborn as sns
+
+import numpy as np
+
+
+def show_matrix_with_colours(table: np.ndarray,
+                             name: str = "",
+                             row_labels=None,
+                             col_labels=None,
+                             save_to: Optional[str] = None,
+                             fig_size: Optional[tuple[float]] = (10, 10)):
+    if row_labels is None:
+        row_labels = [str(i) for i in range(table.shape[0])]
+    if col_labels is None:
+        col_labels = [str(j) for j in range(table.shape[1])]
+
+    fig, ax = plt.subplots(figsize=fig_size)
+    sns.heatmap(
+        table,
+        cmap="viridis",
+        center=0,
+        linewidths=0.5,
+        xticklabels=col_labels,
+        yticklabels=row_labels,
+        cbar=True
+    )
+    ax.set_title(name)
+    plt.xticks(rotation=90, fontsize=6)
+    plt.yticks(fontsize=6)
+    plt.tight_layout()
+
+    if save_to:
+        plt.savefig(save_to)
+    else:
+        plt.show()

@@ -225,7 +225,7 @@ class PRef:
         elif len(pRefs) == 1:
             return pRefs[0]
         else:
-            fsm = np.vstack(tuple(pRef.inverted_fsm for pRef in pRefs))
+            fsm = np.vstack(tuple(pRef.full_solution_matrix for pRef in pRefs))
             fitness_array = np.concatenate([pRef.fitness_array for pRef in pRefs])
             search_space = pRefs[0].search_space
             return cls(full_solution_matrix=fsm,
