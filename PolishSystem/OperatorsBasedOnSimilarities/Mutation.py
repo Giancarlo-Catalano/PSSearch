@@ -2,7 +2,7 @@ import numpy as np
 from pymoo.core.mutation import Mutation
 
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import \
-    sample_PS_from_probabilties_for_global, scale_to_have_sum_and_max
+    sample_PS_from_probabilties_for_global, scale_to_have_sum_and_max, from_global_to_zeroone
 
 
 class TransitionMutation(Mutation):
@@ -22,7 +22,7 @@ class TransitionMutation(Mutation):
             prob=0.9 if prob is None else prob)  # no idea what's supposed to be there, but it used to say 0.9 by default..
 
     def mutate_single_individual(self, x: np.ndarray) -> np.ndarray:
-        values = x.copy()
+        values = from_global_to_zeroone(x)
         # step 1: obtain probabilties from the transition matrix (as if it was a markov model)
         unscaled_probabilities = (values.reshape((1, -1)) @ self.transition_matrix).reshape(-1)
 

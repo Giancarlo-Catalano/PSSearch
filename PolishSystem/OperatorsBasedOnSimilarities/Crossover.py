@@ -2,7 +2,7 @@ import numpy as np
 from pymoo.core.crossover import Crossover
 
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import scale_to_have_sum_and_max, \
-    sample_PS_from_probabilties_for_global
+    sample_PS_from_probabilties_for_global, from_global_to_zeroone
 
 
 class TransitionCrossover(Crossover):
@@ -17,8 +17,8 @@ class TransitionCrossover(Crossover):
         self.transition_matrix = transition_matrix
         self.n = transition_matrix.shape[0]
 
-    @classmethod
-    def ps_uniform_crossover(self, mother: np.ndarray, father: np.ndarray):
+    def ps_uniform_crossover(self, mother_glob: np.ndarray, father_glob: np.ndarray):
+        mother , father= from_global_to_zeroone(mother_glob), from_global_to_zeroone(father_glob)
         guaranteed = mother * father
         considering = mother + father - guaranteed * 2
 
@@ -34,6 +34,8 @@ class TransitionCrossover(Crossover):
         actual_probabilities[~considering] = 0
         actual_probabilities[guaranteed] = 1
 
+        print(len(actual_probabilities))
+
         return sample_PS_from_probabilties_for_global(actual_probabilities)
 
     def _do(self, problem, X, **kwargs):
@@ -41,6 +43,8 @@ class TransitionCrossover(Crossover):
 
         children = np.array([self.ps_uniform_crossover(mother, father)
                              for mother, father in zip(X[0], X[1])])
+
+        print(f"Children has shape {children}")
 
         return np.swapaxes(children, 0, 1)
 

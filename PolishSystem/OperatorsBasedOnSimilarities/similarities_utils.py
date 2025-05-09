@@ -4,7 +4,7 @@ import gzip, pickle
 from scipy.stats.qmc import MultivariateNormalQMC
 from sklearn.cluster import KMeans
 
-from Core.PS import PS
+from Core.PS import PS, STAR
 
 
 class CustomUnpickler(pickle.Unpickler):
@@ -27,10 +27,8 @@ def gian_load_all_pickled_objects(file_path):
     return objects
 
 def gian_get_similarities(cluster_info_file):
-    with gzip.open(cluster_info_file) as f:
-        which_cluster = pickle.load(f)
-        center_embeddings = pickle.load(f)
-        similarities = pickle.load(f)
+    contents_of_pickle = gian_load_all_pickled_objects(cluster_info_file)
+    which_cluster, centers_embeddings, similarities, _, _, _ = contents_of_pickle
 
     return similarities
 
@@ -84,3 +82,7 @@ def sample_PS_from_probabilties_for_global(probabilities) -> np.ndarray:
     result = np.full(shape=len(probabilities), fill_value=-1, dtype=int)
     result[ones] = 1
     return result
+
+
+def from_global_to_zeroone(glob):
+    return np.array(glob!=STAR, dtype=int)
