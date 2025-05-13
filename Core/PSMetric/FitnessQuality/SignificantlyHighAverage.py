@@ -69,11 +69,13 @@ class MannWhitneyU(Metric):
     pRef: Optional[PRef]
     test_method: str
     alternative: str
+    sample_threshold: int
 
-    def __init__(self, alternative: str = "two-sided"):
+    def __init__(self, alternative: str = "two-sided", sample_threshold: int = 2):
         self.pRef = None
         self.test_method = "asymptotic"
         self.alternative = alternative
+        self.sample_threshold = sample_threshold
 
         assert(self.alternative in {"two-sided", "less", "greater"})
 
@@ -83,7 +85,7 @@ class MannWhitneyU(Metric):
         self.pRef = pRef
 
     def get_p_value(self, first_group: np.ndarray, second_group: np.ndarray) -> float:
-        if min(len(first_group), len(second_group)) < 3:
+        if min(len(first_group), len(second_group)) < self.sample_threshold:
             return 1.0
         test = mannwhitneyu(first_group, second_group, alternative=self.alternative, method=self.test_method)
         return test.pvalue

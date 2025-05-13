@@ -158,4 +158,6 @@ def find_ps_in_polish_problem(original_problem_search_space: SearchSpace,
                                           ps_budget=ps_budget,
                                           verbose=verbose)
 
+    pss = [ps for ps in pss if not ps.is_empty()]
+
     return apply_culling_method(pss, culling_method)
