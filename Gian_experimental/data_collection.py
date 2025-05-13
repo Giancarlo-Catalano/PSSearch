@@ -6,9 +6,12 @@ from typing import Callable
 import numpy as np
 
 import utils
+from BenchmarkProblems.RoyalRoad import RoyalRoad
 from Core.PRef import PRef
 from Core.PS import PS, STAR
 from Core.PSMetric.FitnessQuality.SignificantlyHighAverage import MannWhitneyU
+from Core.PSMetric.Linkage.ValueSpecificMutualInformation import FasterSolutionSpecificMutualInformation
+from Core.get_pRef import get_pRef_from_metaheuristic
 from PolishSystem.GlobalPSPolishSearch import find_ps_in_polish_problem
 from PolishSystem.OperatorsBasedOnSimilarities.get_operators import get_operators_for_similarities
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import gian_get_similarities
@@ -78,6 +81,8 @@ def get_data_comparing_operators():
     test_pRef = get_pRef_from_vectors(name_of_vectors_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\test_many_hot_vectors_250_qmc.csv",
                                           name_of_fitness_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\test_fitness_250_qmc.csv",
                                       column_in_fitness_file=2)
+
+
 
     cluster_info_file_name = os.path.join(data_folder, f"cluster_info_{size}_{clustering_method}.pkl")
     similarities = gian_get_similarities(cluster_info_file_name)
@@ -189,6 +194,92 @@ def get_data_comparing_operators():
                             file_destination=os.path.join(results_dir, "compare_methods"+utils.get_formatted_timestamp()+".json"))
 
 
-get_data_comparing_operators()
+def get_data_comparing_operators_dummy():
+    problem = RoyalRoad(5)
+
+    # then we make a pRef
+    pRef = get_pRef_from_metaheuristic(problem=problem,
+                                       sample_size=10000,
+                                       which_algorithm="GA",
+                                       unique=True,
+                                       verbose=True)
+
+    train_pRef, test_pRef = pRef.train_test_split(test_size=0.2)
+
+
+    evaluator, atomicity_metric  = get_metric_function("estimated_atomicity&evaluator", pRef=train_pRef, solution=train_pRef.get_best_solution())
+    similarities = evaluator.linkage_table
+
+    true_atomicity = get_metric_function("ground_truth_atomicity", problem=problem, solution=train_pRef.get_best_solution())
+
+    sampler, mutation, crossover = get_operators_for_similarities(similarities, test_pRef, wanted_average_quantity_of_ones=2)
+
+    def atomicity_on_similarity(ps):
+        if ps.fixed_count() < 2:
+            return 1000
+        else:
+            valid_indices = [index for index, value in enumerate(ps.values) if value != STAR]
+            linkages = [similarities[a, b] for a, b in itertools.combinations(valid_indices, r=2)]
+            return -np.average(linkages)
+
+    def make_cached_metric(original_metric):
+        cached_values = dict()
+
+        def get_value(ps):
+            if ps in cached_values:
+                return cached_values[ps]
+            else:
+                value = original_metric(ps)
+                cached_values[ps] = value
+                return value
+
+        return get_value
+
+    simplicity = make_cached_metric(get_metric_function("simplicity"))
+    sample_size = make_cached_metric(get_metric_function("sample_count", pRef=train_pRef))
+    consistency = make_cached_metric(get_metric_function("consistency/greater", pRef=train_pRef))
+    estimated_atomicity = make_cached_metric(atomicity_on_similarity)
+    #atomicity_old = make_cached_metric(get_metric_function("estimated_atomicity", pRef= train_pRef))
+    variance = get_metric_function("variance", pRef=pRef)
+
+    def with_true_atomicity(pRef):
+        return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
+                                        objectives=[simplicity, variance, true_atomicity],
+                                        ps_budget=10000,
+                                        population_size=100,
+                                        culling_method=None,
+                                        verbose=True,
+                                        )
+
+
+    def with_old_atomicity(pRef):
+        return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
+                                        objectives=[simplicity, variance, estimated_atomicity],
+                                        ps_budget=10000,
+                                        population_size=100,
+                                        culling_method=None,
+                                        verbose=True,
+                                        )
+
+    # def using_old_operators_old_atomicity(pRef):
+    #     return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
+    #                                     objectives=[sample_size, consistency, atomicity_old],
+    #                                     ps_budget=10000,
+    #                                     population_size=100,
+    #                                     culling_method=None,
+    #                                     verbose=True,
+    #                                     )
+
+    results_dir = r"C:\Users\gac8\PycharmProjects\PSSearch\Gian_experimental"
+    compare_methods_on_pRef(train_pRef=train_pRef,
+                            test_pRef=test_pRef,
+                            pRef_name = f"RR",
+                            methods={"true": with_true_atomicity,
+                                     "estimated": with_old_atomicity,
+                            },
+                            file_destination=os.path.join(results_dir, "compare_methods"+utils.get_formatted_timestamp()+".json"))
+
+
+get_data_comparing_operators_dummy()
 
 
