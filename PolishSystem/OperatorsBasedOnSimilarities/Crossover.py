@@ -1,8 +1,10 @@
+import random
+
 import numpy as np
 from pymoo.core.crossover import Crossover
 
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import scale_to_have_sum_and_max, \
-    sample_PS_from_probabilties_for_global, from_global_to_zeroone
+    sample_PS_from_probabilties_for_global, from_global_to_zeroone, scale_to_have_sum
 
 
 class TransitionCrossover(Crossover):
@@ -17,26 +19,24 @@ class TransitionCrossover(Crossover):
         self.transition_matrix = transition_matrix
         self.n = transition_matrix.shape[0]
 
-    def ps_uniform_crossover(self, mother_glob: np.ndarray, father_glob: np.ndarray):
-        mother , father= from_global_to_zeroone(mother_glob), from_global_to_zeroone(father_glob)
-        guaranteed = mother * father
-        considering = mother + father - guaranteed * 2
+    def ps_uniform_crossover(self, mother: np.ndarray, father: np.ndarray):
+        guaranteed = np.logical_and(mother, father)
+        considering = np.logical_xor(mother, father)
 
-        guaranteed = np.array(guaranteed, dtype=bool)
-        considering = np.array(considering, dtype=bool)
-
-        probabilities_for_considering = (considering.reshape((1, -1)) @ self.transition_matrix).ravel()
+        probabilities_for_considering = (np.array(considering, dtype=float).reshape((1, -1)) @ self.transition_matrix).ravel()
         probabilities_for_considering[~considering] = 0
 
         average_cardinality = (np.sum(mother) + np.sum(father)) / 2 - np.sum(guaranteed)
-        actual_probabilities = scale_to_have_sum_and_max(probabilities_for_considering, wanted_sum=average_cardinality,
-                                                         wanted_max=0.5, positions=len(considering))
+        actual_probabilities = scale_to_have_sum(probabilities_for_considering, wanted_sum=average_cardinality)
         actual_probabilities[~considering] = 0
         actual_probabilities[guaranteed] = 1
 
-        print(len(actual_probabilities))
+        child_1 = sample_PS_from_probabilties_for_global(actual_probabilities)
+        # child 1 and child 2 are complementary w.r.t. the considering array
+        child_2 = np.logical_xor(considering, child_1)
 
-        return sample_PS_from_probabilties_for_global(actual_probabilities)
+        return (child_1, child_2)
+
 
     def _do(self, problem, X, **kwargs):
         _, n_matings, _ = X.shape
@@ -44,7 +44,16 @@ class TransitionCrossover(Crossover):
         children = np.array([self.ps_uniform_crossover(mother, father)
                              for mother, father in zip(X[0], X[1])])
 
-        print(f"Children has shape {children}")
+        return np.swapaxes(children, 0, 1)
+    def _do_experimental(self, problem, X, **kwargs):
+        _, n_matings, _ = X.shape
+
+        def make_child_pair():
+            mother = random.choice(X[0])
+            father = random.choice(X[1])
+            return self.ps_uniform_crossover(mother, father)
+
+        children = np.array([make_child_pair() for _ in range(n_matings)])
 
         return np.swapaxes(children, 0, 1)
 

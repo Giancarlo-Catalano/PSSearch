@@ -65,8 +65,9 @@ def get_metric_function(metric_name: str,
         return estimated_atomicity_metric, with_inverted_sign(estimated_atomicity_metric.get_atomicity)
 
 
-    if metric_name == "consistency":
-        fitness_consistency_evaluator = MannWhitneyU()
+    if metric_name.startswith("consistency"):
+        kind_of_test = metric_name.split("/")[1]
+        fitness_consistency_evaluator = MannWhitneyU(kind_of_test)
         fitness_consistency_evaluator.set_pRef(pRef)
         return fitness_consistency_evaluator.get_single_score
 
@@ -79,7 +80,7 @@ def get_metric_function(metric_name: str,
         count_evaluator.set_pRef(pRef)
         return with_inverted_sign(count_evaluator.get_single_score)
 
-    return None
+    raise NotImplementedError(f"Did not recognise metric {metric_name}")
 
 
 def construct_objectives_list(metrics_str: str,

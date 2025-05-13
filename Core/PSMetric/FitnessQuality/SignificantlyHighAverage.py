@@ -68,10 +68,14 @@ class SignificantlyHighAverage(Metric):
 class MannWhitneyU(Metric):
     pRef: Optional[PRef]
     test_method: str
+    alternative: str
 
-    def __init__(self):
+    def __init__(self, alternative: str = "two-sided"):
         self.pRef = None
         self.test_method = "asymptotic"
+        self.alternative = alternative
+
+        assert(self.alternative in {"two-sided", "less", "greater"})
 
         super().__init__()
 
@@ -81,12 +85,12 @@ class MannWhitneyU(Metric):
     def get_p_value(self, first_group: np.ndarray, second_group: np.ndarray) -> float:
         if min(len(first_group), len(second_group)) < 3:
             return 1.0
-        test = mannwhitneyu(first_group, second_group, alternative="two-sided", method=self.test_method)
+        test = mannwhitneyu(first_group, second_group, alternative=self.alternative, method=self.test_method)
         return test.pvalue
 
     def get_p_value_fast(self, first_group: np.ndarray, second_group: np.ndarray, restrict_size: int) -> float:
 
-        test = mannwhitneyu(first_group[:restrict_size], second_group[:restrict_size], alternative="two-sided",
+        test = mannwhitneyu(first_group[:restrict_size], second_group[:restrict_size], alternative=self.alternative,
                             method=self.test_method)
         return test.pvalue
 

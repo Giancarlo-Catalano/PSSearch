@@ -22,15 +22,15 @@ class TransitionMutation(Mutation):
             prob=0.9 if prob is None else prob)  # no idea what's supposed to be there, but it used to say 0.9 by default..
 
     def mutate_single_individual(self, x: np.ndarray) -> np.ndarray:
-        values = from_global_to_zeroone(x)
+
         # step 1: obtain probabilties from the transition matrix (as if it was a markov model)
-        unscaled_probabilities = (values.reshape((1, -1)) @ self.transition_matrix).reshape(-1)
+        unscaled_probabilities = (np.array(x, dtype=float).reshape((1, -1)) @ self.transition_matrix).reshape(-1)
 
         # step 2: scale the probabilities so that
         ## * the expected quantity of ones at the end is probably the same as the original (wanted sum)
         ## * the probability of the original values staying is wanted_max
 
-        probabilities = scale_to_have_sum_and_max(unscaled_probabilities, wanted_sum=np.sum(values),
+        probabilities = scale_to_have_sum_and_max(unscaled_probabilities, wanted_sum=np.sum(x),
                                                   wanted_max=self.disappearance_rate, positions=self.n)
         # step 3: generate a solution based on those probabilities
         return sample_PS_from_probabilties_for_global(probabilities)

@@ -78,10 +78,7 @@ def sample_PS_from_probabilties_for_local(probabilities):
     return np.random.random(len(probabilities)) < probabilities
 
 def sample_PS_from_probabilties_for_global(probabilities) -> np.ndarray:
-    ones = np.random.random(len(probabilities)) < probabilities
-    result = np.full(shape=len(probabilities), fill_value=-1, dtype=int)
-    result[ones] = 1
-    return result
+    return np.random.random(len(probabilities)) < probabilities
 
 
 def from_global_to_zeroone(glob):
