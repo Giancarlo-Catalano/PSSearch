@@ -26,3 +26,5 @@ def get_operators_for_similarities(similarities,
                                   transition_matrix=transition_matrix)
     crossover = TransitionCrossover(transition_matrix)
     return sampler, mutation, crossover
+
+

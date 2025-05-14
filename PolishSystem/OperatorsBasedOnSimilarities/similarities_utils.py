@@ -49,9 +49,9 @@ def get_transition_matrix(similarities):
     def normalise_every_row(table):
         return np.array([normalise_vector(row) for row in table])
 
-    transition_matrix = normalise_every_row(similarities)
+    transition_matrix = normalise_every_row(similarities) #  forces the rows to be in 0, 1
 
-    transition_matrix = np.array([row / np.sum(row) for row in transition_matrix])
+    transition_matrix = np.array([row / np.sum(row) for row in transition_matrix])    # forces the rows to add up to 1
     return transition_matrix
 
 def scale_to_have_sum(vec: np.ndarray, wanted_sum: float):

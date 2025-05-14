@@ -34,7 +34,7 @@ def data_collection(train_pRef: PRef,
     sample_size_train = get_metric_function("sample_count", pRef=train_pRef)
     fitness_consistency_evaluator_train = MannWhitneyU("greater", sample_threshold=30)
     fitness_consistency_evaluator_train.set_pRef(train_pRef)
-    consistency_train = fitness_consistency_evaluator_test.get_single_score
+    consistency_train = fitness_consistency_evaluator_train.get_single_score
 
     ones_count = lambda x: x.fixed_count()
 
@@ -95,7 +95,7 @@ def get_data_comparing_operators(seed: int):
     cluster_info_file_name = in_250(f"cluster_info_{size}_{clustering_method}.pkl")
     similarities = gian_get_similarities(cluster_info_file_name)
 
-    sampler, mutation, crossover = get_operators_for_similarities(similarities, test_pRef,
+    sampler, mutation, crossover = get_operators_for_similarities(similarities, train_pRef,
                                                                   wanted_average_quantity_of_ones=2)
 
     def atomicity_on_similarity(ps):
@@ -145,26 +145,40 @@ def get_data_comparing_operators(seed: int):
                                          culling_method=None,
                                          verbose=True,
                                          )
-
-    def with_new_operators(pRef):
+    def with_new_atomicity_and_crossover(pRef):
         return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
-                                         objectives=[sample_size, consistency, slow_atomicity],
+                                         objectives=[sample_size, consistency, atomicity_new],
                                          ps_budget=10000,
                                          population_size=100,
-                                         sampling_operator=sampler,
-                                         mutation_operator=mutation,
                                          crossover_operator=crossover,
                                          culling_method=None,
                                          verbose=True,
                                          )
-
-    def with_new_atomicity_and_new_operators(pRef):
+    def with_new_atomicity_and_mutation(pRef):
+        return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
+                                         objectives=[sample_size, consistency, atomicity_new],
+                                         ps_budget=10000,
+                                         population_size=100,
+                                         mutation_operator=mutation,
+                                         culling_method=None,
+                                         verbose=True,
+                                         )
+    def with_new_atomicity_and_sampler(pRef):
         return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
                                          objectives=[sample_size, consistency, atomicity_new],
                                          ps_budget=10000,
                                          population_size=100,
                                          sampling_operator=sampler,
-                                         mutation_operator=mutation,
+                                         culling_method=None,
+                                         verbose=True,
+                                         )
+
+    def with_new_atomicity_and_sampler_and_crossover(pRef):
+        return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
+                                         objectives=[sample_size, consistency, atomicity_new],
+                                         ps_budget=10000,
+                                         population_size=100,
+                                         sampling_operator=sampler,
                                          crossover_operator=crossover,
                                          culling_method=None,
                                          verbose=True,
@@ -174,10 +188,8 @@ def get_data_comparing_operators(seed: int):
     compare_methods_on_pRef(train_pRef=train_pRef,
                             test_pRef=test_pRef,
                             pRef_name=f"PRef,cluster_size = {size}, method = {clustering_method}",
-                            methods={"control": control,
-                                     "with_new_operators": with_new_operators,
-                                     "with_new_atomicity_and_new_operators": with_new_atomicity_and_new_operators,
-                                     "with_new_atomicity": with_new_atomicity,
+                            methods={
+                                     "with_new_atomicity_and_sampler_and_crossover": with_new_atomicity_and_sampler_and_crossover,
                                      },
                             file_destination=os.path.join(results_dir,
                                                           "compare_methods" + utils.get_formatted_timestamp() + ".json"))
