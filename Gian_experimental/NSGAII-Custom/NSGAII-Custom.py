@@ -1,7 +1,7 @@
 import itertools
 import random
 from collections import defaultdict
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 
 import numpy as np
 
@@ -69,11 +69,19 @@ def hot_encode_and_multiply(solution: NCSolution, transition_matrix: np.ndarray)
 
 
 class NCMutation:
+    def __init__(self):
+        pass
+
+    def mutated(self, solution: NCSolution) -> NCSolution:
+        raise NotImplementedError()
+
+class NCMutationCounterproductive(NCMutation):
     transition_matrix: np.ndarray
     disappearance_probability: np.ndarray
     n: int
 
     def __init__(self, transition_probabilities, disappearance_probability):
+        super().__init__()
         self.transition_matrix = transition_probabilities
         self.disappearance_probability = disappearance_probability
         self.n = transition_probabilities.shape[1]
@@ -86,6 +94,28 @@ class NCMutation:
                                                   wanted_max=1 - self.disappearance_probability,
                                                   positions=self.n)
         return sample_from_probabilities(probabilities)
+
+
+class NCMutationSimple(NCMutation):
+    n: int
+    mutation_rate: float
+    def __init__(self, n: int, mutation_rate: Optional[float] = None):
+        super().__init__()
+        self.n = n
+        self.mutation_rate = mutation_rate if mutation_rate is not None else 1/n
+
+
+    def mutated(self, solution: NCSolution) -> NCSolution:
+        result = solution.copy()
+        for index in range(self.n):
+            toggle = random.random() < self.mutation_rate
+            if not toggle:
+                continue
+            if index in result:
+                result.remove(index)
+            else:
+                result.add(index)
+        return result
 
 
 class NCCrossover:
@@ -323,11 +353,10 @@ def check_dummy():
         return -np.average(np.square(np.array(distances)))
 
     algorithm = NSGAIICustom(sampling=NCSampler.from_PRef(pRef),
-                             mutation=NCMutation(transition_probabilities=transition_matrix,
-                                                 disappearance_probability=0.1),
+                             mutation=NCMutationSimple(problem.search_space.amount_of_parameters),
                              crossover=NCCrossover(transition_probabilities=transition_matrix),
                              probability_of_crossover=0.5,
-                             eval_budget=1000,
+                             eval_budget=5000,
                              pop_size=100,
                              tournament_size=3,
                              fitness_functions=[simplicity, atomicity],
