@@ -10,6 +10,7 @@ from BenchmarkProblems.RoyalRoad import RoyalRoad
 from Core.PRef import PRef
 from Core.PS import PS, STAR
 from Core.PSMetric.FitnessQuality.SignificantlyHighAverage import MannWhitneyU
+from Core.PSMetric.Linkage.Atomicity import Atomicity
 from Core.PSMetric.Linkage.ValueSpecificMutualInformation import FasterSolutionSpecificMutualInformation
 from Core.get_pRef import get_pRef_from_metaheuristic
 from PolishSystem.GlobalPSPolishSearch import find_ps_in_polish_problem
@@ -75,16 +76,26 @@ def get_data_comparing_operators():
     # pRef = get_pRef_from_vectors(get_vectors_file_name(data_folder, size, clustering_method),
     #                                      get_fitness_file_name(data_folder, size, clustering_method), fitness_column_to_use)
 
-    train_pRef = get_pRef_from_vectors(name_of_vectors_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\train_many_hot_vectors_250_qmc.csv",
-                                          name_of_fitness_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\train_fitness_250_qmc.csv",
+    dir_250 = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\250"
+    def in_250(path):
+        return os.path.join(dir_250, path)
+
+    # train_pRef = get_pRef_from_vectors(name_of_vectors_file=in_250("train_many_hot_vectors_250_qmc.csv"),
+    #                                       name_of_fitness_file=in_250("train_fitness_250_qmc.csv"),
+    #                                   column_in_fitness_file=2)
+    # test_pRef = get_pRef_from_vectors(name_of_vectors_file=in_250("test_many_hot_vectors_250_qmc.csv"),
+    #                                       name_of_fitness_file=in_250("test_fitness_250_qmc.csv"),
+    #                                   column_in_fitness_file=2)
+
+    pRef =  get_pRef_from_vectors(name_of_vectors_file=in_250("many_hot_vectors_250_qmc.csv"),
+                                          name_of_fitness_file=in_250("fitness_250_qmc.csv"),
                                       column_in_fitness_file=2)
-    test_pRef = get_pRef_from_vectors(name_of_vectors_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\test_many_hot_vectors_250_qmc.csv",
-                                          name_of_fitness_file=r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\test_fitness_250_qmc.csv",
-                                      column_in_fitness_file=2)
+
+    train_pRef, test_pRef = pRef.train_test_split(test_size=0.3)
 
 
 
-    cluster_info_file_name = os.path.join(data_folder, f"cluster_info_{size}_{clustering_method}.pkl")
+    cluster_info_file_name = in_250(f"cluster_info_{size}_{clustering_method}.pkl")
     similarities = gian_get_similarities(cluster_info_file_name)
 
     sampler, mutation, crossover = get_operators_for_similarities(similarities, test_pRef, wanted_average_quantity_of_ones=2)
@@ -114,7 +125,11 @@ def get_data_comparing_operators():
     sample_size = make_cached_metric(get_metric_function("sample_count", pRef=train_pRef))
     consistency = make_cached_metric(get_metric_function("consistency/greater", pRef=train_pRef))
     atomicity_new = make_cached_metric(atomicity_on_similarity)
-    #atomicity_old = make_cached_metric(get_metric_function("estimated_atomicity", pRef= train_pRef))
+
+    old_atomicity_metric = Atomicity()
+    old_atomicity_metric.set_pRef(train_pRef)
+    old_atomicity = old_atomicity_metric.get_single_score
+    atomicity_old = make_cached_metric(get_metric_function("estimated_atomicity", pRef= train_pRef))
 
     def using_new_operators_new_atomicity(pRef):
         return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
@@ -184,7 +199,7 @@ def get_data_comparing_operators():
     #                                     verbose=True,
     #                                     )
 
-    results_dir = r"C:\Users\gac8\PycharmProjects\PSSearch\Gian_experimental"
+    results_dir = r"C:\Users\gac8\PycharmProjects\PSSearch\Gian_experimental\operator_data_collection"
     compare_methods_on_pRef(train_pRef=train_pRef,
                             test_pRef=test_pRef,
                             pRef_name = f"PRef,cluster_size = {size}, method = {clustering_method}",
@@ -238,13 +253,14 @@ def get_data_comparing_operators_dummy():
     simplicity = make_cached_metric(get_metric_function("simplicity"))
     sample_size = make_cached_metric(get_metric_function("sample_count", pRef=train_pRef))
     consistency = make_cached_metric(get_metric_function("consistency/greater", pRef=train_pRef))
+    mean_fitness = make_cached_metric(get_metric_function("mean_fitness", pRef=pRef))
     estimated_atomicity = make_cached_metric(atomicity_on_similarity)
     #atomicity_old = make_cached_metric(get_metric_function("estimated_atomicity", pRef= train_pRef))
     variance = get_metric_function("variance", pRef=pRef)
 
     def with_true_atomicity(pRef):
         return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
-                                        objectives=[simplicity, variance, true_atomicity],
+                                        objectives=[simplicity, mean_fitness, true_atomicity],
                                         ps_budget=10000,
                                         population_size=100,
                                         culling_method=None,
@@ -254,7 +270,7 @@ def get_data_comparing_operators_dummy():
 
     def with_old_atomicity(pRef):
         return find_ps_in_polish_problem(original_problem_search_space=pRef.search_space,
-                                        objectives=[simplicity, variance, estimated_atomicity],
+                                        objectives=[simplicity, mean_fitness, estimated_atomicity],
                                         ps_budget=10000,
                                         population_size=100,
                                         culling_method=None,
@@ -280,6 +296,6 @@ def get_data_comparing_operators_dummy():
                             file_destination=os.path.join(results_dir, "compare_methods"+utils.get_formatted_timestamp()+".json"))
 
 
-get_data_comparing_operators_dummy()
+get_data_comparing_operators()
 
 
