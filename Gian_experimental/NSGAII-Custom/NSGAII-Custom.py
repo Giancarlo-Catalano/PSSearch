@@ -269,10 +269,10 @@ class NSGAIICustom:
                 else:
                     yield make_child_asexually()
 
-        children = self.make_population(child_yielder(), required_quantity=self.pop_size - len(pareto_fronts[0]))
+        children = self.make_population(child_yielder(), required_quantity=self.pop_size)
 
         if self.unique:
-            return children.union(pareto_fronts[0])
+            return children.union(pareto_fronts[0]) # elitist
         else:
             return children + pareto_fronts[0]  # elitist
 
@@ -330,11 +330,13 @@ def check_dummy():
                              eval_budget=1000,
                              pop_size=100,
                              tournament_size=3,
-                             fitness_functions=[metric_a, metric_b],
-                             unique=True
+                             fitness_functions=[simplicity, atomicity],
+                             unique=False
                              )
 
     pss = algorithm.run(verbose=True)
+    pss = list(set(pss))
+    pss.sort(key=lambda x: x.fitnesses[0])
     for ps in pss:
         print(ps.solution, ps.fitnesses)
     return pss
