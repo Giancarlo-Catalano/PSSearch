@@ -25,7 +25,7 @@ class EvaluatedNCSolution:
         self.fitnesses = fitnesses
 
     def __hash__(self):
-        return hash(tuple(self.solution))
+        return hash(self.fitnesses)  # is this a bad idea?
 
     def dominates(self, other) -> bool:
         return all(f_here <= f_there for f_here, f_there in zip(self.fitnesses, other.fitnesses))
@@ -416,7 +416,7 @@ class NSGAIICustom:
 def check_dummy():
 
     def metric_a(sol):
-        return float(abs(len(sol) - 10))
+        return sum(sol)
 
     def metric_b(sol):
         return float(len(sol))
@@ -430,7 +430,7 @@ def check_dummy():
         return -np.average(np.square(np.array(distances)))
 
     def get_metrics(ps: NCSolution) -> tuple[float]:
-        return (metric_b(ps), metric_c(ps))
+        return (metric_a(ps), metric_b(ps), metric_c(ps))
 
 
     n = 10
@@ -443,7 +443,7 @@ def check_dummy():
                              pop_size=100,
                              tournament_size=3,
                              mo_fitness_function=get_metrics,
-                             unique=False
+                             unique=True
                              )
 
     pss = algorithm.run(verbose=True)
