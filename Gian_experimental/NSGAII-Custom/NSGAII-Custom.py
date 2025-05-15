@@ -28,7 +28,7 @@ class EvaluatedNCSolution:
         return hash(tuple(self.solution))
 
     def dominates(self, other) -> bool:
-        return all(f_here < f_there for f_here, f_there in zip(self.fitnesses, other.fitnesses))
+        return all(f_here <= f_there for f_here, f_there in zip(self.fitnesses, other.fitnesses))
 
     def __repr__(self):
         return f"{self.solution}, {self.fitnesses}"
