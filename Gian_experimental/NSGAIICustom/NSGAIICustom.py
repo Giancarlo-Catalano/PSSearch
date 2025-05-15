@@ -65,7 +65,6 @@ class NCSamplerSimple(NCSampler):
         probabilities = np.ones(genome_size) * quantity / genome_size
         return cls(probabilities)
 
-
     def sample(self) -> NCSolution:
         return sample_from_probabilities(self.probabilities)
 
@@ -150,14 +149,13 @@ class NCCrossover:
     def __init__(self):
         pass
 
-
     def crossed(self, a: NCSolution, b: NCSolution) -> (NCSolution, NCSolution):
         raise NotImplementedError()
 
 
 class NCCrossoverSimple(NCCrossover):
-
     swap_probability: float
+
     def __init__(self, swap_probability: float):
         super().__init__()
         self.swap_probability = swap_probability
@@ -178,7 +176,6 @@ class NCCrossoverSimple(NCCrossover):
         add_to_children(a, child_1, child_2)
         add_to_children(b, child_2, child_1)
         return child_1, child_2
-
 
 
 class NCCrossoverTransition:
@@ -222,6 +219,7 @@ class NSGAIICustom:
     unique: bool
     tournament_size: int
     culler: Callable
+    verbose: bool
 
     def __init__(self,
                  sampling: NCSampler,
@@ -233,7 +231,9 @@ class NSGAIICustom:
                  mo_fitness_function: Callable[[NCSolution], tuple[float]],
                  unique: bool,
                  tournament_size: int,
-                 culler: Optional[Callable[[Iterable[EvaluatedNCSolution], int], Iterable[EvaluatedNCSolution]]] = None):
+                 culler: Optional[
+                     Callable[[Iterable[EvaluatedNCSolution], int], Iterable[EvaluatedNCSolution]]] = None,
+                 verbose:bool = False):
         self.sampling = sampling
         self.mutation = mutation
         self.crossover = crossover
@@ -244,10 +244,17 @@ class NSGAIICustom:
         self.unique = unique
         self.tournament_size = tournament_size
         self.culler = culler if culler is not None else self.default_culler
+        self.verbose = verbose
 
-    def default_culler(self, population: Iterable[EvaluatedNCSolution], quantity_required: int) -> Iterable[EvaluatedNCSolution]:
-        print("calling the default culler")
+
+    def log(self, msg: str):
+        if self.verbose:
+            print("NSGAIICustom -> "+msg)
+
+    def default_culler(self, population: Iterable[EvaluatedNCSolution], quantity_required: int) -> Iterable[
+        EvaluatedNCSolution]:
         return list(population)[:quantity_required]
+
     def make_unique_population(self, yielder, required_quantity):
         result = set()
 
@@ -270,9 +277,6 @@ class NSGAIICustom:
             return self.make_non_unique_population(yielder, required_quantity)
 
     def run(self, verbose: bool = False) -> list[EvaluatedNCSolution]:
-        def log(msg):
-            if verbose:
-                print(msg)
 
         used_evaluations = [0]
 
@@ -285,14 +289,12 @@ class NSGAIICustom:
             while True:
                 yield with_fitnesses(self.sampling.sample())
 
-        log("Beginning of NC process")
+        self.log("Beginning of NC process")
         population = self.make_population(yielder=sampler_yielder(), required_quantity=self.pop_size)
 
         while (used_evaluations[0] < self.eval_budget):
-            print(f"Population has size {len(population)}")
             population = self.make_next_generation(population, with_fitnesses)
-            log(f"Used evals: {used_evaluations[0]}")
-        print(f"Population at end has size {len(population)}")
+            self.log(f"Used evals: {used_evaluations[0]}")
         pareto_fronts = self.get_pareto_fronts(population)
 
         if self.unique:
@@ -336,8 +338,6 @@ class NSGAIICustom:
         for front_index, front_members in pareto_fronts.items():
             pareto_front_lists[front_index] = front_members
 
-        # debug
-        print(f"Pareto fronts: {[len(item) for item in pareto_front_lists]}")
         return pareto_front_lists
 
     def child_yielder(self,
@@ -379,7 +379,6 @@ class NSGAIICustom:
         else:
             pop.extend(new_elements)
 
-
     def union_of_populations(self, pop, new_elements: Iterable[EvaluatedNCSolution]):
         if self.unique:
             return pop.union(new_elements)
@@ -409,19 +408,19 @@ class NSGAIICustom:
 
         if front_that_was_excluded is not None:
             self.add_to_population(final_population,
-                                   self.culler(front_that_was_excluded, quantity_required=self.pop_size - len(final_population)))
+                                   self.culler(front_that_was_excluded,
+                                               quantity_required=self.pop_size - len(final_population)))
         return final_population
 
 
 def check_dummy():
+    def sum_of_values(sol):
+        return -sum(sol)
 
-    def metric_a(sol):
-        return sum(sol)
-
-    def metric_b(sol):
+    def simplicity(sol):
         return float(len(sol))
 
-    def metric_c(sol) -> float:
+    def distances_between_values(sol) -> float:
         if len(sol) < 2:
             return 1000
         vals = list(sol)
@@ -429,17 +428,27 @@ def check_dummy():
         distances = [big - small for big, small in zip(vals[1:], vals[0:])]
         return -np.average(np.square(np.array(distances)))
 
+    n = 16
+
+
+    def quantity_of_divisors(sol):
+        def find_divisors(num):
+            return {d for d in range(2, num + 1) if num % d == 0}
+
+        if sol:
+            all_divisors = set.union(*(find_divisors(num) for num in sol))
+            return len(all_divisors)
+        else:
+            return 0
+
     def get_metrics(ps: NCSolution) -> tuple[float]:
-        return (metric_a(ps), metric_b(ps), metric_c(ps))
-
-
-    n = 10
+        return (sum_of_values(ps), quantity_of_divisors(ps))
 
     algorithm = NSGAIICustom(sampling=NCSamplerSimple.with_average_quantity(n / 2, genome_size=n),
                              mutation=NCMutationSimple(n),
-                             crossover=NCCrossoverSimple(swap_probability=1/n),
+                             crossover=NCCrossoverSimple(swap_probability=1 / n),
                              probability_of_crossover=0.5,
-                             eval_budget=1500,
+                             eval_budget=5000,
                              pop_size=100,
                              tournament_size=3,
                              mo_fitness_function=get_metrics,
@@ -454,4 +463,4 @@ def check_dummy():
     return pss
 
 
-check_dummy()
+#check_dummy()
