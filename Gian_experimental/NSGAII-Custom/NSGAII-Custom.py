@@ -30,12 +30,12 @@ class EvaluatedNCSolution:
     def dominates(self, other) -> bool:
         return all(f_here < f_there for f_here, f_there in zip(self.fitnesses, other.fitnesses))
 
-
     def __repr__(self):
         return f"{self.solution}, {self.fitnesses}"
 
     def __eq__(self, other):
         return self.solution == other.solution
+
 
 def sample_from_probabilities(probabilities) -> NCSolution:
     result = set()
@@ -46,9 +46,35 @@ def sample_from_probabilities(probabilities) -> NCSolution:
 
 
 class NCSampler:
+    def __init__(self):
+        pass
+
+    def sample(self) -> NCSolution:
+        raise NotImplementedError()
+
+
+class NCSamplerSimple(NCSampler):
+    probabilities: np.ndarray
+
+    def __init__(self, probabilities: np.ndarray):
+        super().__init__()
+        self.probabilities = probabilities
+
+    @classmethod
+    def with_average_quantity(cls, quantity: float, genome_size: int):
+        probabilities = np.ones(genome_size) * quantity / genome_size
+        return cls(probabilities)
+
+
+    def sample(self) -> NCSolution:
+        return sample_from_probabilities(self.probabilities)
+
+
+class NCSamplerFromPRef(NCSampler):
     probabilities_of_existing: np.ndarray
 
     def __init__(self, probabilities_of_existing: np.ndarray):
+        super().__init__()
         self.probabilities_of_existing = probabilities_of_existing
         self.probabilities_of_existing = scale_to_have_sum(self.probabilities_of_existing, wanted_sum=4)
 
@@ -75,6 +101,7 @@ class NCMutation:
     def mutated(self, solution: NCSolution) -> NCSolution:
         raise NotImplementedError()
 
+
 class NCMutationCounterproductive(NCMutation):
     transition_matrix: np.ndarray
     disappearance_probability: np.ndarray
@@ -99,11 +126,11 @@ class NCMutationCounterproductive(NCMutation):
 class NCMutationSimple(NCMutation):
     n: int
     mutation_rate: float
+
     def __init__(self, n: int, mutation_rate: Optional[float] = None):
         super().__init__()
         self.n = n
-        self.mutation_rate = mutation_rate if mutation_rate is not None else 1/n
-
+        self.mutation_rate = mutation_rate if mutation_rate is not None else 1 / n
 
     def mutated(self, solution: NCSolution) -> NCSolution:
         result = solution.copy()
@@ -119,6 +146,42 @@ class NCMutationSimple(NCMutation):
 
 
 class NCCrossover:
+
+    def __init__(self):
+        pass
+
+
+    def crossed(self, a: NCSolution, b: NCSolution) -> (NCSolution, NCSolution):
+        raise NotImplementedError()
+
+
+class NCCrossoverSimple(NCCrossover):
+
+    swap_probability: float
+    def __init__(self, swap_probability: float):
+        super().__init__()
+        self.swap_probability = swap_probability
+
+    def crossed(self, a: NCSolution, b: NCSolution):
+        guaranteed = a.intersection(b)
+
+        child_1 = guaranteed.copy()
+        child_2 = guaranteed.copy()
+
+        def add_to_children(main_parent, preferred_child, other_child):
+            for exclusive in main_parent - guaranteed:
+                if random.random() < self.swap_probability:
+                    other_child.add(exclusive)
+                else:
+                    preferred_child.add(exclusive)
+
+        add_to_children(a, child_1, child_2)
+        add_to_children(b, child_2, child_1)
+        return child_1, child_2
+
+
+
+class NCCrossoverTransition:
     transition_matrix: np.ndarray
 
     def __init__(self, transition_probabilities):
@@ -153,7 +216,7 @@ class NSGAIICustom:
     crossover: NCCrossover
     probability_of_crossover: float
 
-    fitness_functions: list[Callable[[NCSolution], float]]
+    mo_fitness_function: Callable[[NCSolution], tuple[float]]
     pop_size: int
     eval_budget: int
     unique: bool
@@ -166,7 +229,7 @@ class NSGAIICustom:
                  probability_of_crossover: float,
                  pop_size: int,
                  eval_budget: int,
-                 fitness_functions: list[Callable],
+                 mo_fitness_function: Callable[[NCSolution], tuple[float]],
                  unique: bool,
                  tournament_size: int):
         self.sampling = sampling
@@ -175,7 +238,7 @@ class NSGAIICustom:
         self.probability_of_crossover = probability_of_crossover
         self.pop_size = pop_size
         self.eval_budget = eval_budget
-        self.fitness_functions = fitness_functions
+        self.mo_fitness_function = mo_fitness_function
         self.unique = unique
         self.tournament_size = tournament_size
 
@@ -204,10 +267,11 @@ class NSGAIICustom:
         def log(msg):
             if verbose:
                 print(msg)
+
         used_evaluations = [0]
 
         def with_fitnesses(solution: NCSolution) -> EvaluatedNCSolution:
-            fitnesses = tuple(f(solution) for f in self.fitness_functions)
+            fitnesses = self.mo_fitness_function(solution)
             used_evaluations[0] += 1
             return EvaluatedNCSolution(solution, fitnesses)
 
@@ -219,9 +283,10 @@ class NSGAIICustom:
         population = self.make_population(yielder=sampler_yielder(), required_quantity=self.pop_size)
 
         while (used_evaluations[0] < self.eval_budget):
+            print(f"Population has size {len(population)}")
             population = self.make_next_generation(population, with_fitnesses)
             log(f"Used evals: {used_evaluations[0]}")
-
+        print(f"Population at end has size {len(population)}")
         pareto_fronts = self.get_pareto_fronts(population)
 
         if self.unique:
@@ -258,17 +323,21 @@ class NSGAIICustom:
                     dom_count[q] -= 1
                     if dom_count[q] == 0:
                         Q.append(q)
-            pareto_fronts[i+1] = Q
+            pareto_fronts[i + 1] = Q
             i += 1
 
-        result_pareto_fronts = [list() for _  in pareto_fronts]
+        pareto_front_lists = [list() for _ in pareto_fronts]
         for front_index, front_members in pareto_fronts.items():
-            result_pareto_fronts[front_index] = front_members
-        return result_pareto_fronts
+            pareto_front_lists[front_index] = front_members
 
-    def make_next_generation(self, population: Iterable[EvaluatedNCSolution], evaluator):
-        pareto_fronts = self.get_pareto_fronts(population)
+        # debug
+        print(f"Pareto fronts: {[len(item) for item in pareto_front_lists]}")
+        return pareto_front_lists
 
+    def child_yielder(self,
+                      population,
+                      pareto_fronts,
+                      evaluator):
         indices_and_ranks = [(index, rank)
                              for rank, front in enumerate(pareto_fronts)
                              for index, _ in enumerate(front)]
@@ -290,76 +359,86 @@ class NSGAIICustom:
             child_2 = self.mutation.mutated(child_2)
             return evaluator(child_1), evaluator(child_2)
 
-        def child_yielder():
-            while True:
-                if random.random() < self.probability_of_crossover:
-                    child_1, child_2 = make_child_sexually()
-                    yield child_1
-                    yield child_2
-                else:
-                    yield make_child_asexually()
+        while True:
+            if random.random() < self.probability_of_crossover:
+                child_1, child_2 = make_child_sexually()
+                yield child_1
+                yield child_2
+            else:
+                yield make_child_asexually()
 
-        children = self.make_population(child_yielder(), required_quantity=self.pop_size)
-
+    def add_to_population(self, pop, new_elements):
         if self.unique:
-            return children.union(pareto_fronts[0]) # elitist
+            pop.update(new_elements)
         else:
-            return children + pareto_fronts[0]  # elitist
+            pop.extend(new_elements)
+
+
+    def union_of_populations(self, pop, new_elements):
+        if self.unique:
+            return pop.union(new_elements)
+        else:
+            return pop+new_elements
+
+    def select_by_crowding(self, front, quantity_required: int):
+        return list(front)[:quantity_required]  # TODO this is temporary
+
+    def make_next_generation(self, population: Iterable[EvaluatedNCSolution], evaluator):
+        pareto_fronts = self.get_pareto_fronts(population)
+
+        Q = self.make_population(self.child_yielder(population, pareto_fronts, evaluator),
+                                 required_quantity=self.pop_size)
+
+        R = self.union_of_populations(population, Q)
+        fronts_of_R = self.get_pareto_fronts(R)  # I don't like that there's 2 constructions of pareto fronts!
+
+        # then truncation selection by front
+        final_population = set() if self.unique else list()
+        front_that_was_excluded = None
+
+        for front_index, front in enumerate(fronts_of_R):
+            if len(final_population) + len(front) < self.pop_size:
+                self.add_to_population(final_population, front)
+            else:
+                front_that_was_excluded = front
+
+        if front_that_was_excluded is not None:
+            self.add_to_population(final_population,
+                                   self.select_by_crowding(front_that_was_excluded,
+                                                           quantity_required=self.pop_size - len(final_population)))
+        return final_population
 
 
 def check_dummy():
-    problem = RoyalRoad(5)
-
-    # then we make a pRef
-    pRef = get_pRef_from_metaheuristic(problem=problem,
-                                       sample_size=10000,
-                                       which_algorithm="GA",
-                                       unique=True,
-                                       verbose=True)
-
-    ground_truth_atomicity_evaluator = TraditionalPerturbationLinkage(problem)
-    ground_truth_atomicity_evaluator.set_solution(pRef.get_best_solution())
-
-    transition_matrix = ground_truth_atomicity_evaluator.linkage_table
-
-    def simplicity(sol):
-        return len(sol)
-
-    def mean_fitness(sol):
-        ps_values = np.full(shape=problem.search_space.amount_of_parameters, fill_value=-1, dtype=int)
-        ps_values[list(sol)] = 1
-        ps = PS(ps_values)
-        return -np.average(pRef.fitnesses_of_observations(ps))
-
-    def atomicity(sol):
-        if len(sol) < 2:
-            return 0
-        linkages = [transition_matrix[a, b] for a, b in itertools.combinations(sol, r=2)]
-        return -np.average(linkages)
-
 
     def metric_a(sol):
-        return abs(len(sol) - 10)
+        return float(abs(len(sol) - 10))
 
     def metric_b(sol):
-        return abs(len(sol))
+        return float(len(sol))
 
-    def metric_c(sol):
+    def metric_c(sol) -> float:
         if len(sol) < 2:
             return 1000
         vals = list(sol)
         vals.sort()
-        distances = [big-small for big, small in zip(vals[1:], vals[0:])]
+        distances = [big - small for big, small in zip(vals[1:], vals[0:])]
         return -np.average(np.square(np.array(distances)))
 
-    algorithm = NSGAIICustom(sampling=NCSampler.from_PRef(pRef),
-                             mutation=NCMutationSimple(problem.search_space.amount_of_parameters),
-                             crossover=NCCrossover(transition_probabilities=transition_matrix),
+    def get_metrics(ps: NCSolution) -> tuple[float]:
+        return (metric_b(ps), metric_c(ps))
+
+
+    n = 10
+
+    algorithm = NSGAIICustom(sampling=NCSamplerSimple.with_average_quantity(n / 2, genome_size=n),
+                             mutation=NCMutationSimple(n),
+                             crossover=NCCrossoverSimple(swap_probability=1/n),
                              probability_of_crossover=0.5,
-                             eval_budget=5000,
+                             eval_budget=1500,
                              pop_size=100,
                              tournament_size=3,
-                             fitness_functions=[simplicity, atomicity],
+                             mo_fitness_function=get_metrics,
                              unique=False
                              )
 
