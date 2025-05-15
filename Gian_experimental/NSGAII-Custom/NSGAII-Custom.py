@@ -221,6 +221,7 @@ class NSGAIICustom:
     eval_budget: int
     unique: bool
     tournament_size: int
+    culler: Callable
 
     def __init__(self,
                  sampling: NCSampler,
@@ -231,7 +232,8 @@ class NSGAIICustom:
                  eval_budget: int,
                  mo_fitness_function: Callable[[NCSolution], tuple[float]],
                  unique: bool,
-                 tournament_size: int):
+                 tournament_size: int,
+                 culler: Optional[Callable[[Iterable[EvaluatedNCSolution], int], Iterable[EvaluatedNCSolution]]] = None):
         self.sampling = sampling
         self.mutation = mutation
         self.crossover = crossover
@@ -241,7 +243,11 @@ class NSGAIICustom:
         self.mo_fitness_function = mo_fitness_function
         self.unique = unique
         self.tournament_size = tournament_size
+        self.culler = culler if culler is not None else self.default_culler
 
+    def default_culler(self, population: Iterable[EvaluatedNCSolution], quantity_required: int) -> Iterable[EvaluatedNCSolution]:
+        print("calling the default culler")
+        return list(population)[:quantity_required]
     def make_unique_population(self, yielder, required_quantity):
         result = set()
 
@@ -374,14 +380,13 @@ class NSGAIICustom:
             pop.extend(new_elements)
 
 
-    def union_of_populations(self, pop, new_elements):
+    def union_of_populations(self, pop, new_elements: Iterable[EvaluatedNCSolution]):
         if self.unique:
             return pop.union(new_elements)
         else:
-            return pop+new_elements
-
-    def select_by_crowding(self, front, quantity_required: int):
-        return list(front)[:quantity_required]  # TODO this is temporary
+            new_pop = pop.copy()
+            new_pop.extend(new_elements)
+            return new_pop
 
     def make_next_generation(self, population: Iterable[EvaluatedNCSolution], evaluator):
         pareto_fronts = self.get_pareto_fronts(population)
@@ -404,8 +409,7 @@ class NSGAIICustom:
 
         if front_that_was_excluded is not None:
             self.add_to_population(final_population,
-                                   self.select_by_crowding(front_that_was_excluded,
-                                                           quantity_required=self.pop_size - len(final_population)))
+                                   self.culler(front_that_was_excluded, quantity_required=self.pop_size - len(final_population)))
         return final_population
 
 
