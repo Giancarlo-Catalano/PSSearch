@@ -97,7 +97,7 @@ def pRef_from_GA_best(benchmark_problem: BenchmarkProblem,
 
 def pRef_from_SA_best(benchmark_problem: BenchmarkProblem,
                  sample_size: int) -> PRef:
-    """returns only the end results of each run of SA. There will be _sample\_size_ runs in total.
+    """returns only the end results of each run of SA. There will be _sample_size_ runs in total.
     Note that this is significantly slower that using all of the attempts"""
 
     algorithm = SA(fitness_function=benchmark_problem.fitness_function,
