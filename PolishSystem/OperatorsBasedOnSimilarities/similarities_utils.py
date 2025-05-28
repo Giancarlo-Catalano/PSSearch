@@ -55,9 +55,13 @@ def get_transition_matrix(similarities):
     return transition_matrix
 
 def scale_to_have_sum(vec: np.ndarray, wanted_sum: float):
+    if wanted_sum <= 0:
+        return np.zeros_like(vec)
     return wanted_sum * vec / np.sum(vec)
 
 def scale_to_have_sum_and_max(vec: np.ndarray, wanted_sum, wanted_max, positions: int):
+    if wanted_sum <= 0:
+        return np.zeros_like(vec)
     with_sum_one = vec / np.sum(vec)
     current_max = np.max(with_sum_one)
     # current sum = 1

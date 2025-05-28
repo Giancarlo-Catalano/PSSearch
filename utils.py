@@ -90,14 +90,14 @@ class Announce(ContextDecorator):
 
     def __enter__(self):
         if self.verbose:
-            print(self.action_str, end="...")
+            print(f"starting [{self.action_str}]")
         self.timer.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.timer.__exit__(exc_type, exc_val, exc_tb)
         runtime = self.timer.runtime
         if self.verbose:
-            print(f"...Finished (took {runtime:2f} seconds)")
+            print(f"[{self.action_str}]...Finished (took {runtime:2f} seconds)")
 
 
 def announce(action: str, verbose=True):

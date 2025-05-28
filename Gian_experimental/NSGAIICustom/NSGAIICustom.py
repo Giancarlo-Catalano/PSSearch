@@ -103,22 +103,23 @@ class NCMutation:
 
 class NCMutationCounterproductive(NCMutation):
     transition_matrix: np.ndarray
-    disappearance_probability: np.ndarray
     n: int
 
-    def __init__(self, transition_probabilities, disappearance_probability):
+    def __init__(self, transition_probabilities):
         super().__init__()
         self.transition_matrix = transition_probabilities
-        self.disappearance_probability = disappearance_probability
         self.n = transition_probabilities.shape[1]
 
     def mutated(self, solution: NCSolution) -> NCSolution:
         probabilities = hot_encode_and_multiply(solution, self.transition_matrix)
         probabilities = probabilities.ravel()
-        probabilities = scale_to_have_sum_and_max(probabilities,
-                                                  wanted_sum=len(solution),
-                                                  wanted_max=1 - self.disappearance_probability,
-                                                  positions=self.n)
+        disappearance_probability = 1/len(solution) if len(solution) > 0 else 0 # TODO document this
+        # probabilities = scale_to_have_sum_and_max(probabilities,
+        #                                           wanted_sum=len(solution),
+        #                                           wanted_max=1 - disappearance_probability,
+        #                                           positions=self.n)
+        probabilities = scale_to_have_sum(probabilities, len(solution))  # it should already be like that...
+        # print(probabilities)
         return sample_from_probabilities(probabilities)
 
 
@@ -178,10 +179,11 @@ class NCCrossoverSimple(NCCrossover):
         return child_1, child_2
 
 
-class NCCrossoverTransition:
+class NCCrossoverTransition(NCCrossover):
     transition_matrix: np.ndarray
 
     def __init__(self, transition_probabilities):
+        super().__init__()
         self.transition_matrix = transition_probabilities
 
     def crossed(self, a: NCSolution, b: NCSolution):
@@ -191,10 +193,12 @@ class NCCrossoverTransition:
         considering_probabilities = hot_encode_and_multiply(considering, self.transition_matrix)
         considering_probabilities = considering_probabilities.ravel()
         wanted_quantity_of_ones = ((len(a) + len(b)) / 2) - len(guaranteed)
-        considering_probabilities = scale_to_have_sum_and_max(considering_probabilities,
-                                                              wanted_sum=wanted_quantity_of_ones,
-                                                              wanted_max=1,
-                                                              positions=len(considering))
+        # considering_probabilities = scale_to_have_sum_and_max(considering_probabilities,
+        #                                                       wanted_sum=wanted_quantity_of_ones,
+        #                                                       wanted_max=1,
+        #                                                       positions=len(considering))
+        considering_probabilities = scale_to_have_sum(considering_probabilities,
+                                                      wanted_sum=wanted_quantity_of_ones)
         child_1 = guaranteed.copy()
         child_2 = guaranteed.copy()
 
@@ -276,7 +280,7 @@ class NSGAIICustom:
         else:
             return self.make_non_unique_population(yielder, required_quantity)
 
-    def run(self, verbose: bool = False) -> list[EvaluatedNCSolution]:
+    def run(self) -> list[EvaluatedNCSolution]:
 
         used_evaluations = [0]
 
@@ -463,4 +467,3 @@ def check_dummy():
     return pss
 
 
-#check_dummy()
