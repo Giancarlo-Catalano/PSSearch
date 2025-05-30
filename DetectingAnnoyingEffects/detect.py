@@ -226,6 +226,9 @@ def detect_non_marginality_on_dynamic_dataset(dynamic_fitness_function_usage: Dy
 
     def get_non_marginality_for_variable(var: int):
         cardinality = dynamic_fitness_function_usage.search_space.variables[var].cardinality
+        if cardinality == 1:
+            return {"0":0,
+                    "worst":0}
 
         wins = np.zeros(shape=(cardinality, cardinality), dtype=int)
 
