@@ -206,7 +206,7 @@ def gather_data(genome_threshold: Optional[float]):
     with open(result_filename, "w") as file:
         json.dump(results_by_generation, file, indent=4)
 
-
-for genome_threshold in [None, 1, 2, 3, 4]:
-    for _ in range(50):
-        gather_data(genome_threshold)
+#
+# for genome_threshold in [None, 1, 2, 3, 4]:
+#     for _ in range(50):
+#         gather_data(genome_threshold)
