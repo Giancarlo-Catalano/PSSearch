@@ -5,17 +5,14 @@ from sklearn.preprocessing import OneHotEncoder
 from BenchmarkProblems.BT.EfficientBTProblem.EfficientBTProblem import EfficientBTProblem
 from BenchmarkProblems.GraphColouring import GraphColouring
 from BenchmarkProblems.NK import NK
-from Core.FullSolution import FullSolution
 from typing import Callable
 from Core.SearchSpace import SearchSpace
 from BenchmarkProblems.BenchmarkProblem import BenchmarkProblem
 
 import json
-from DetectingAnnoyingEffects.detect import ProblemSearchSpace, BooleanVariable, detect_effects_on_dynamic_dataset, \
-    DynamicFitnessFunctionWithRandomSample, AnnoyingEffects, CombinatorialVariable, \
-    DynamicFitnessFunctionWithEnumeration
+from DetectingAnnoyingEffects.BehaviourDetection.detect import ProblemSearchSpace, detect_effects_on_dynamic_dataset, \
+    DynamicFitnessFunctionWithRandomSample, AnnoyingEffects, CombinatorialVariable
 import numpy as np
-import utils
 from Core.FullSolution import FullSolution
 
 

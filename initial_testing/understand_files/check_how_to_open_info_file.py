@@ -90,7 +90,7 @@ def main(path):
     print("All methods failed to load the file.")
 
 
-path = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\cluster_info_20_qmc.pkl"
+path = r"/data/retail_forecasting/cluster_info_20_qmc.pkl"
 main(path)
 
 

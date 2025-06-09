@@ -7,9 +7,8 @@ from typing import Iterable, Optional, Iterator
 import numpy as np
 
 import utils
-from Gian_experimental.NSGAIICustom.NSGAIICustom import NSGAIICustom, NCSolution, EvaluatedNCSolution, NCSampler, \
-    NCMutation, NCCrossover, NCSamplerFromPRef, NCCrossoverTransition, NCSamplerSimple, NCMutationSimple, \
-    NCCrossoverSimple, NCMutationCounterproductive
+from Gian_experimental.NSGAIICustom.CustomOperators import NCSamplerFromPRef, NCMutationCounterproductive, \
+    NCCrossoverTransition
 from Gian_experimental.NSGAIICustom.testing_in_vitro.SPRef import SPRef, OptimisedSPref
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import gian_get_similarities, get_transition_matrix
 from PolishSystem.read_data import get_pRef_from_vectors
@@ -17,8 +16,7 @@ import os
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import get_transition_matrix
 from typing import Iterable
 from Gian_experimental.NSGAIICustom.NSGAIICustom import NSGAIICustom, NCSolution, NCSamplerSimple, NCMutationSimple, \
-    NCCrossoverSimple, EvaluatedNCSolution, NCSamplerFromPRef, NCCrossoverTransition
-import heapq
+    EvaluatedNCSolution, NCCrossoverSimple
 
 
 # we want to show how the operators affect the sample_size of the children as the program progresses
