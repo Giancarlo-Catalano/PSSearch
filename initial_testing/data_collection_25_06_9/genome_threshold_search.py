@@ -183,12 +183,14 @@ def results_to_json(results_of_run: Iterable[EvaluatedNCSolution],
         ps = run_result.solution
         matching, non_matching = test_session_data.partition(ps, threshold=search_settings.genome_threshold)
         can_do_stats = min(len(matching), len(non_matching)) > 2
-        if can_do_stats:
-            return {"ps": sorted(list(ps)),
+
+        serialisable_ps = sorted(list(ps))
+        if not can_do_stats:
+            return {"ps": serialisable_ps,
                         "samples": len(matching) / len(non_matching)}
         else:
             test = mannwhitneyu(matching, non_matching, alternative="greater")
-            return {"ps": ps,
+            return {"ps": serialisable_ps,
                     "median_diff": np.median(matching) - np.median(non_matching),
                     "p_value": test.pvalue,
                     "samples": len(matching) / len(non_matching)}

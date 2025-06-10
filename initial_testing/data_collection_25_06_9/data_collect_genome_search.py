@@ -9,14 +9,14 @@ from initial_testing.data_collection_25_06_9.genome_threshold_search import Poli
 
 cluster_info_file_name = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\cluster_info_250_random.pkl"
 data_path = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting"
-results_path = r"C:\Users\gac8\PycharmProjects\PSSearch\initial_testing\data_collection_25_06_9\results\v1"
+results_path = r"C:\Users\gac8\PycharmProjects\PSSearch\initial_testing\data_collection_25_06_9\results\v2"
 
 def run(destination_path):
     print("Starting data collection")
 
     all_new = PolishSearchSettings(code_name="all_new",
                                    population_size=100,
-                                   evaluation_budget=500,
+                                   evaluation_budget=5000,
                                    genome_threshold=3,
                                    cluster_info_file_name=cluster_info_file_name,
                                    use_custom_atomicity=True,
@@ -31,7 +31,7 @@ def run(destination_path):
 
     all_old = PolishSearchSettings(code_name="all_old",
                                    population_size=100,
-                                   evaluation_budget=500,
+                                   evaluation_budget=5000,
                                    cluster_info_file_name=cluster_info_file_name,
                                    include_sample_quantity=True,
                                    include_variance=True,
@@ -71,5 +71,6 @@ def run(destination_path):
 
     print("All done!")
 
-
-run(results_path)
+for i in range(12):
+    print(f"iteration {i}")
+    run(results_path)
