@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import wasserstein_distance, mannwhitneyu
 
 from Core.PRef import PRef
+from Core.PSMetric.Linkage.ValueSpecificMutualInformation import GlobalLinkageBasedOnMutualInformation
 from Gian_experimental.NSGAIICustom.CustomOperators import NCSamplerFromPRef, NCMutationCounterproductive, \
     NCCrossoverTransition
 from Gian_experimental.NSGAIICustom.NSGAIICustom import EvaluatedNCSolution, NCSamplerSimple, NCMutationSimple, \
@@ -88,7 +89,8 @@ def make_metrics_cached(metrics):
 
 def search_for_pss_using_genome_threshold(train_session_data: PRef,
                                           optimised_session_data: OptimisedSPref,
-                                          search_settings: PolishSearchSettings) -> list[EvaluatedNCSolution]:
+                                          search_settings: PolishSearchSettings,
+                                          old_atomicity_metric: Optional[GlobalLinkageBasedOnMutualInformation]) -> list[EvaluatedNCSolution]:
 
     n = train_session_data.search_space.amount_of_parameters
     def tie_breaker(population: Iterable[EvaluatedNCSolution], quantity_required: int):
@@ -101,12 +103,22 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
     custom_mutation = NCMutationCounterproductive(transition_matrix)
     custom_crossover = NCCrossoverTransition(transition_matrix)
 
-    def atomicity(ps):
-        if len(ps) < 2:
-            return -1000
-        else:
-            linkages = [similarities[a, b] for a, b in itertools.combinations(ps, r=2)]
-            return np.average(linkages)
+
+    atomicity = None
+    if search_settings.use_custom_atomicity:
+        def atomicity_based_on_similarity(ps):
+            if len(ps) < 2:
+                return -1000
+            else:
+                linkages = [similarities[a, b] for a, b in itertools.combinations(ps, r=2)]
+                return np.average(linkages)
+        atomicity = atomicity_based_on_similarity
+    else:
+        def old_atomicity(ps):
+            return old_atomicity_metric.get_atomicity_of_set(ps)
+
+        atomicity = old_atomicity
+
 
     traditional_sampling = NCSamplerSimple.with_average_quantity(3, genome_size=n)
     traditional_mutation = NCMutationSimple(n)
@@ -152,10 +164,6 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
             atomicity_score = atomicity(ps)
             result.append(-atomicity_score)
 
-
-
-
-
         return tuple(result)
 
     algorithm = NSGAIICustom(sampling=custom_sampling if search_settings.use_custom_sampling_operator else traditional_sampling,
@@ -167,7 +175,7 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
                              tournament_size=3,
                              mo_fitness_function=make_metrics_cached(get_metrics),
                              unique=True,
-                             verbose=True,
+                             verbose=False,
                              culler=tie_breaker)
 
 
@@ -193,6 +201,6 @@ def results_to_json(results_of_run: Iterable[EvaluatedNCSolution],
             return {"ps": serialisable_ps,
                     "median_diff": np.median(matching) - np.median(non_matching),
                     "p_value": test.pvalue,
-                    "samples": len(matching) / len(non_matching)}
+                    "samples": len(matching) / (len(non_matching+len(matching)))}
 
     return list(map(ps_to_json, results_of_run))

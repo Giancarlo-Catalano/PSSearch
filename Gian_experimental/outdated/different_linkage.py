@@ -25,12 +25,23 @@ class FinalLinkage:
         self.univariate_win_tables, self.bivariate_win_tables = self.get_tables()
 
     def get_tables(self):
-        univariate_win_tables = defaultdict(int)  # the key is var, winner_val, lower_val
+        univariate_win_tables = defaultdict(float)  # the key is var, winner_val, lower_val
         bivariate_win_tables = defaultdict(
-            int)  # the key is var_a, var_a, winner_val_a, winner_val_b, loser_val_a, loser_val_b
+            float)  # the key is var_a, var_a, winner_val_a, winner_val_b, loser_val_a, loser_val_b
+
+
+        expected_distance = self.pRef.search_space.amount_of_parameters / 2
+        def get_similarity_of_solution_from_others(solution):
+            distances = np.sum(np.equal(self.pRef.full_solution_matrix, solution), axis=1)
+            too_big = sum(distances > expected_distance)
+            too_small = sum(distances < expected_distance)
+            ratio = too_small / too_big
+            return ratio
 
         for index_1, solution_1 in enumerate(self.pRef.full_solution_matrix):
             fitness_1 = self.pRef.fitness_array[index_1]
+            weight = get_similarity_of_solution_from_others(solution_1)
+            weight = min(weight, 1)
             for index_2, solution_2 in enumerate(self.pRef.full_solution_matrix[index_1 + 1:], start=index_1 + 1):
                 diff: np.ndarray = solution_1 != solution_2
 
@@ -48,7 +59,7 @@ class FinalLinkage:
                     var = diff_positions[0]
                     winner_val = winner[var]
                     loser_val = loser[var]
-                    univariate_win_tables[var, winner_val, loser_val] += 1
+                    univariate_win_tables[var, winner_val, loser_val] += weight
 
                     # question: shouldn't we also update bivariate_win_tables with every other variable, paired with var?
                 elif diff_count == 2:
@@ -57,7 +68,7 @@ class FinalLinkage:
                     winner_val_b = winner[var_b]
                     loser_val_a = loser[var_a]
                     loser_val_b = loser[var_b]
-                    bivariate_win_tables[var_a, var_b, winner_val_a, winner_val_b, loser_val_a, loser_val_b] += 1
+                    bivariate_win_tables[var_a, var_b, winner_val_a, winner_val_b, loser_val_a, loser_val_b] += weight
 
         return univariate_win_tables, bivariate_win_tables
 
@@ -132,7 +143,7 @@ class FinalLinkage:
 
 
 def run():
-    problem = NK.random(16, 3)
+    problem = Trapk(5, 4) #NK.random(16, 3)
     pRef = get_pRef_from_metaheuristic(problem=problem,
                                        sample_size=10000,
                                        which_algorithm="GA",

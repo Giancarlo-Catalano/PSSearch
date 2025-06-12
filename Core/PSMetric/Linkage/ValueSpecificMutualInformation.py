@@ -427,3 +427,94 @@ class FasterSolutionSpecificMutualInformation(SolutionSpecificMutualInformation,
 
 
 
+
+class GlobalLinkageBasedOnMutualInformation(FasterSolutionSpecificMutualInformation):
+
+    cached_bivariate_linkages = dict[(int, int), np.ndarray]  # varA, varB => a numpy table for every combination of their values
+    # once the probability tables are obtained, then we can pre-calculate any bivariate linkage
+
+    def __init__(self):
+        super().__init__()
+
+
+    def calculate_probability_tables(self) -> (list, list):
+
+        solution_matrix = self.pRef.full_solution_matrix
+        fitness_array = self.pRef.fitness_array
+
+        ss = self.pRef.search_space
+        cs = ss.cardinalities
+        univariate_counts = [np.zeros(card, dtype=float) for card in cs]
+        bivariate_count_table = [[np.zeros((c2, c1), dtype=float)
+                                  for c1 in cs]
+                                 for c2 in cs]
+
+        # from here on, rank is a high value when the solution is good, a low value when it's bad
+        # ie global optima = size_of_pRef, global minima = 0 for a maximisation problem
+        sample_size = self.pRef.sample_size
+
+        def get_rank_of_fitness(fitness: float) -> float:
+            # count the amount of times a fitness like this would win in a binary tournament, if there were (n*n-1) total tournaments
+            normal_wins = np.sum(fitness_array < fitness)
+            tie_break_wins = np.sum(fitness == fitness) / 2  # TODO is this meant to be pRef.fitness_array == fitness
+            all_wins = float(normal_wins + tie_break_wins)
+
+            return all_wins
+
+        def register_solution_for_univariate(solution: np.ndarray, rank: float):
+            for var, value in enumerate(solution):
+                univariate_counts[var][value] += rank
+
+        def register_solution_for_bivariate(solution: np.ndarray, rank: float):
+            for var_a, value_a in enumerate(solution):
+                for var_b in range(var_a + 1, len(solution)):
+                    value_b = solution[var_b]
+                    bivariate_count_table[var_a][var_b][value_a, value_b] += rank
+
+        for sample, fitness, index in zip(solution_matrix, fitness_array, range(100000)):
+            if index % (sample_size // 100) == 0:
+                print(f"Progress on linkage: {int((index / sample_size) * 100)}%")
+            rank = get_rank_of_fitness(fitness)
+            register_solution_for_univariate(sample, rank)
+            register_solution_for_bivariate(sample, rank)
+
+        def counts_to_probabilities(counts: np.ndarray):
+            """ used for both arrays and matrices"""
+            return (counts / np.sum(counts))
+
+        univariate_probabilities = [counts_to_probabilities(var_counts) for var_counts in univariate_counts]
+        bivariate_probabilities = [[counts_to_probabilities(bivariate_count_table[var_a][var_b])
+                                    if var_b > var_a else None
+                                    for var_b in range(len(cs))]
+                                   for var_a in range(len(cs))]
+        return univariate_probabilities, bivariate_probabilities
+
+    def set_pRef(self, pRef: PRef):
+        self.pRef = pRef
+        self.univariate_probability_table, self.bivariate_probability_table = self.calculate_probability_tables()
+
+        self.cached_linkages = self.get_bivariate_linkages()
+
+    def get_bivariate_linkages(self) -> dict[(int, int), np.ndarray]:
+        def get_for_var_pair(var_a, var_b):
+            card_a = self.pRef.search_space.cardinalities[var_a]
+            card_b = self.pRef.search_space.cardinalities[var_b]
+            linkage_table = np.zeros(shape=(card_a, card_b), dtype=float)
+            for val_a in range(card_a):
+                for val_b in range(card_b):
+                    linkage_table[val_a, val_b] = self.mutual_information(var_a, val_a, var_b, val_b)
+            return linkage_table
+
+        n = self.pRef.search_space.amount_of_parameters
+
+        return {(var_a, var_b): get_for_var_pair(var_a, var_b)
+                for var_a, var_b in itertools.combinations(range(n), r=2)}
+
+    def get_atomicity_of_set(self, ps: set[int]):
+        # this is specifically for the polish research
+        if len(ps) < 2:
+            return -1000
+
+        linkages = [self.cached_linkages[(var_a, var_b)][1, 1]
+                    for var_a, var_b in itertools.combinations(sorted(ps), r=2)]
+        return np.average(linkages)
