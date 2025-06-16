@@ -27,7 +27,7 @@ class NCSamplerFromPRef(NCSampler):
     def sample(self) -> NCSolution:
         produced = sample_from_probabilities(self.probabilities_of_existing)
         if len(produced) == 0 and not self.allow_empty:
-            produced.add(random.choice(range(self.probabilities_of_existing)))
+            produced.add(random.choice(range(len(self.probabilities_of_existing))))
         return produced
 
     @classmethod

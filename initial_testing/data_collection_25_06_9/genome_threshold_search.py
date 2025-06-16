@@ -1,7 +1,7 @@
 import heapq
 import itertools
 from dataclasses import dataclass
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Any
 
 import numpy as np
 from scipy.stats import wasserstein_distance, mannwhitneyu
@@ -12,6 +12,7 @@ from Gian_experimental.NSGAIICustom.CustomOperators import NCSamplerFromPRef, NC
     NCCrossoverTransition
 from Gian_experimental.NSGAIICustom.NSGAIICustom import EvaluatedNCSolution, NCSamplerSimple, NCMutationSimple, \
     NCCrossoverSimple, NCSolution, NSGAIICustom
+from Gian_experimental.NSGAIICustom.evolving_genome_threshold import SampleWithFixedGT, SimpleSampleGT, MutateExceptGT, SimpleMutateGT, SimpleCrossoverGT
 from Gian_experimental.NSGAIICustom.testing_in_vitro.SPRef import SPRef, OptimisedSPref
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import gian_get_similarities, get_transition_matrix
 
@@ -29,7 +30,7 @@ class PolishSearchSettings:
     use_custom_crossover_operator: bool = False
 
     use_custom_atomicity: bool = False
-    genome_threshold: Optional[int] = None
+    genome_threshold: Any = None  # None, int, or "auto"
 
     include_ps_len: bool = False
     include_sample_quantity: bool = False
@@ -56,6 +57,53 @@ class PolishSearchSettings:
                     self.include_diff_median,
                     self.include_wasserstein_distance,
                     self.include_variance])
+
+    def auto_fill_code(self):
+
+        def keywords_in_brackets(keywords):
+            return "["+ " ".join(keywords) + "]"
+
+        # operators
+        operator_keywords = []
+        operator_keywords.append("CS" if self.use_custom_sampling_operator else "OS")
+        operator_keywords.append("CM" if self.use_custom_mutation_operator else "OM")
+        operator_keywords.append("CC" if self.use_custom_crossover_operator else "OC")
+
+        # metrics keywords
+        metrics_keywords = []
+        if self.include_ps_len:
+            metrics_keywords.append("Len")
+
+        if self.include_sample_quantity:
+            metrics_keywords.append("SSize")
+
+        if self.include_mean_fitness:
+            metrics_keywords.append("MFit")
+
+        if self.include_p_value:
+            metrics_keywords.append("PVal")
+
+        if self.include_wasserstein_distance:
+            metrics_keywords.append("WDist")
+
+        if self.include_diff_median:
+            metrics_keywords.append("DMed")
+
+        if self.include_variance:
+            metrics_keywords.append("WVar")
+
+        if self.include_atomicity:
+            if self.use_custom_atomicity:
+                metrics_keywords.append("CAtom")
+            else:
+                metrics_keywords.append("OldAtom")
+
+        # Genome threshold
+        genome_keywords = []
+        genome_keywords.append("G"+str(self.genome_threshold))
+
+        self.code_name = "".join([keywords_in_brackets(operator_keywords), keywords_in_brackets(metrics_keywords), keywords_in_brackets(genome_keywords)])
+
 
 class HashedSolution:
     solution: NCSolution
@@ -120,14 +168,16 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
         atomicity = old_atomicity
 
 
-    traditional_sampling = NCSamplerSimple.with_average_quantity(3, genome_size=n)
+    traditional_sampling = NCSamplerSimple.with_average_quantity(3, genome_size=n, allow_empty=False)
     traditional_mutation = NCMutationSimple(n)
     traditional_crossover = NCCrossoverSimple(swap_probability=1 / n)
 
     quantity_of_objectives = search_settings.get_quantity_of_objectives()
 
     def get_metrics(ps: NCSolution) -> tuple[float]:
-        matching, non_matching = optimised_session_data.partition(ps, threshold=search_settings.genome_threshold)
+        if ps.genome_threshold == "auto":
+            raise NotImplementedError()
+        matching, non_matching = optimised_session_data.partition(ps, threshold=ps.genome_threshold)
         len_m, len_nm = len(matching), len(non_matching)
 
         if len(matching) < 1000:  # a constraint
@@ -166,9 +216,28 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
 
         return tuple(result)
 
-    algorithm = NSGAIICustom(sampling=custom_sampling if search_settings.use_custom_sampling_operator else traditional_sampling,
-                             mutation=custom_mutation if search_settings.use_custom_mutation_operator else traditional_mutation,
-                             crossover=custom_crossover if search_settings.use_custom_mutation_operator else traditional_crossover,
+    sampling_on_set = custom_sampling if search_settings.use_custom_sampling_operator else traditional_sampling
+    mutation_on_set = custom_mutation if search_settings.use_custom_mutation_operator else traditional_mutation
+    crossover_on_set = custom_crossover if search_settings.use_custom_mutation_operator else traditional_crossover
+
+
+
+    if search_settings.genome_threshold == "auto":
+        sampling_to_use = SimpleSampleGT(original_sampler=sampling_on_set)
+        mutation_to_use = SimpleMutateGT(original_mutation=mutation_on_set)
+        crossover_to_use = SimpleCrossoverGT(original_crossover=crossover_on_set)
+    else:
+        # if we don't want to evolve the genome threshold, just initialise them all at the same value
+        # then don't allow mutation to change it
+        # crossover cannot produce anything new
+        sampling_to_use = SampleWithFixedGT(original_sampler=sampling_on_set, genome_threshold=search_settings.genome_threshold)
+        mutation_to_use = MutateExceptGT(original_mutation=mutation_on_set)
+        crossover_to_use = SimpleCrossoverGT(original_crossover=crossover_on_set)
+
+
+    algorithm = NSGAIICustom(sampling=sampling_to_use,
+                             mutation=mutation_to_use,
+                             crossover=crossover_to_use,
                              probability_of_crossover=0.5,
                              eval_budget=search_settings.evaluation_budget,
                              pop_size=search_settings.population_size,
@@ -189,18 +258,20 @@ def results_to_json(results_of_run: Iterable[EvaluatedNCSolution],
                     search_settings: PolishSearchSettings) -> list[dict]:
     def ps_to_json(run_result: EvaluatedNCSolution) -> dict:
         ps = run_result.solution
-        matching, non_matching = test_session_data.partition(ps, threshold=search_settings.genome_threshold)
+        matching, non_matching = test_session_data.partition(ps, threshold=ps.genome_threshold)
         can_do_stats = min(len(matching), len(non_matching)) > 2
 
         serialisable_ps = sorted(list(ps))
         if not can_do_stats:
             return {"ps": serialisable_ps,
-                        "samples": len(matching) / len(non_matching)}
+                    "samples": len(matching) / len(non_matching),
+                    "genome_threshold": None if ps.genome_threshold is None else int(ps.genome_threshold)}
         else:
             test = mannwhitneyu(matching, non_matching, alternative="greater")
             return {"ps": serialisable_ps,
+                    "genome_threshold": None if ps.genome_threshold is None else int(ps.genome_threshold),
                     "median_diff": np.median(matching) - np.median(non_matching),
                     "p_value": test.pvalue,
-                    "samples": len(matching) / (len(non_matching+len(matching)))}
+                    "samples": len(matching) / (len(non_matching)+len(matching))}
 
     return list(map(ps_to_json, results_of_run))

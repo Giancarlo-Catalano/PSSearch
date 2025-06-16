@@ -13,7 +13,7 @@ from initial_testing.data_collection_25_06_9.genome_threshold_search import Poli
 
 cluster_info_file_name = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting\cluster_info_250_random.pkl"
 data_path = r"C:\Users\gac8\PycharmProjects\PSSearch\data\retail_forecasting"
-destination_path = r"C:\Users\gac8\PycharmProjects\PSSearch\initial_testing\data_collection_25_06_9\results\v4"
+destination_path = r"C:\Users\gac8\PycharmProjects\PSSearch\initial_testing\data_collection_25_06_9\results\v5"
 
 
 def in_path(path):
@@ -30,66 +30,128 @@ test_pRef = get_pRef_from_vectors(name_of_vectors_file=in_path("test_many_hot_ve
 train_SPRef = OptimisedSPref.from_pRef(train_pRef)
 test_SPRef = OptimisedSPref.from_pRef(test_pRef)
 
-old_atomicity_metric = GlobalLinkageBasedOnMutualInformation()
-old_atomicity_metric.set_pRef(train_pRef)
 
 def run():
-
-
     print("Starting data collection")
-    evaluation_budget = 5000
+    evaluation_budget = 10000
 
-    baseline = PolishSearchSettings(code_name="[OS OM OC][L MF OA][GN]",
-                                    population_size=100,
-                                    evaluation_budget=evaluation_budget,
-                                    cluster_info_file_name=cluster_info_file_name,
-                                    include_ps_len=True,
-                                    include_mean_fitness=True,
-                                    include_atomicity=True,
-                                    use_custom_atomicity=False,
-                                    )
+    # baseline = PolishSearchSettings(code_name="baseline",
+    #                                 population_size=100,
+    #                                 evaluation_budget=evaluation_budget,
+    #                                 cluster_info_file_name=cluster_info_file_name,
+    #                                 include_ps_len=True,
+    #                                 include_mean_fitness=True,
+    #                                 include_atomicity=True,
+    #                                 use_custom_atomicity=False,
+    #                                 genome_threshold=None,
+    #                                 )
+    # baseline.auto_fill_code()
+    #
+    # with_new_atomicity = copy.deepcopy(baseline)
+    # with_new_atomicity.use_custom_atomicity = True
+    # with_new_atomicity.auto_fill_code()
+    #
+    # with_ss = copy.deepcopy(with_new_atomicity)
+    # with_ss.include_sample_quantity = True
+    # with_ss.auto_fill_code()
+    #
+    # with_genome_3 = copy.deepcopy(with_new_atomicity)
+    # with_genome_3.genome_threshold = 3
+    # with_genome_3.use_custom_sampling_operator = True
+    # with_genome_3.use_custom_mutation_operator = True
+    # with_genome_3.use_custom_crossover_operator = True
+    # with_genome_3.auto_fill_code()
+    #
+    # with_genome_4 = copy.deepcopy(with_genome_3)
+    # with_genome_4.genome_threshold = 4
+    # with_genome_4.auto_fill_code()
+    #
+    # with_genome_5 = copy.deepcopy(with_genome_3)
+    # with_genome_5.genome_threshold = 5
+    # with_genome_5.auto_fill_code()
+    #
+    # with_auto_GT = copy.deepcopy(with_genome_3)
+    # with_auto_GT.genome_threshold = "auto"
+    # with_auto_GT.auto_fill_code()
+    #
+    # with_ss_and_G3 = copy.deepcopy(with_genome_3)
+    # with_ss_and_G3.include_sample_quantity = True
+    # with_ss_and_G3.auto_fill_code()
+    #
+    # with_ss_and_G4 = copy.deepcopy(with_genome_4)
+    # with_ss_and_G4.include_sample_quantity = True
+    # with_ss_and_G4.auto_fill_code()
+    #
+    # with_ss_and_G5 = copy.deepcopy(with_genome_5)
+    # with_ss_and_G5.include_sample_quantity = True
+    # with_ss_and_G5.auto_fill_code()
+    #
+    # with_median_diff = copy.deepcopy(with_ss_and_G3)
+    # with_median_diff.include_mean_fitness = False
+    # with_median_diff.include_diff_median = True
+    # with_median_diff.auto_fill_code()
+    #
+    # with_median_diff_and_wasserstein = copy.deepcopy(with_median_diff)
+    # with_median_diff_and_wasserstein.include_wasserstein_distance = True
+    # with_median_diff_and_wasserstein.auto_fill_code()
 
-    with_new_atomicity = copy.deepcopy(baseline)
-    with_new_atomicity.use_custom_atomicity = True
-    with_new_atomicity.code_name = "[NS NM NC][L MF NA][GN]"
+    known_winner = PolishSearchSettings(code_name="known_winner",
+                                        population_size=200,
+                                        evaluation_budget=evaluation_budget,
+                                        cluster_info_file_name=cluster_info_file_name,
+                                        include_ps_len=True,
+                                        include_sample_quantity=True,
+                                        include_mean_fitness=True,
+                                        include_atomicity=True,
+                                        use_custom_atomicity=True,
+                                        use_custom_sampling_operator=True,
+                                        use_custom_mutation_operator=True,
+                                        use_custom_crossover_operator=True,
+                                        genome_threshold=3,
+                                        )
 
-    with_genome_3 = copy.deepcopy(with_new_atomicity)
-    with_genome_3.genome_threshold = 3
-    with_genome_3.use_custom_sampling_operator = True
-    with_genome_3.use_custom_mutation_operator = True
-    with_genome_3.use_custom_crossover_operator = True
-    with_genome_3.code_name = "[NS NM NC][L MF NA][G3]"
+    kw_withough_ps_len = copy.deepcopy(known_winner)
+    kw_withough_ps_len.include_ps_len = False
 
-    with_genome_4 = copy.deepcopy(with_genome_3)
-    with_genome_4.genome_threshold = 4
-    with_genome_4.code_name = "[NS NM NC][L MF NA][G4]"
+    kw_without_sample_quantity = copy.deepcopy(known_winner)
+    kw_without_sample_quantity.include_sample_quantity = False
 
+    kw_without_mean_fitness = copy.deepcopy(known_winner)
+    kw_without_mean_fitness.include_mean_fitness = False
 
-    with_genome_5 = copy.deepcopy(with_genome_3)
-    with_genome_5.genome_threshold = 5
-    with_genome_5.code_name = "[NS NM NC][L MF NA][G5]"
+    kw_without_atomicity = copy.deepcopy(known_winner)
+    kw_without_atomicity.include_atomicity = False
 
-    with_ss = copy.deepcopy(with_genome_3)
-    with_ss.include_sample_quantity = True
-    with_ss.code_name = "[NS NM NC][L SS MF NA][G3]"
+    kw_without_sampling = copy.deepcopy(known_winner)
+    kw_without_sampling.use_custom_sampling_operator = False
 
-    with_median_diff = copy.deepcopy(with_ss)
-    with_median_diff.include_mean_fitness = False
-    with_median_diff.include_diff_median = True
-    with_median_diff.code_name = "[NS NM NC][L SS DM NA][G3]"
+    kw_without_mutation = copy.deepcopy(known_winner)
+    kw_without_mutation.use_custom_mutation_operator = False
 
-    with_median_diff_and_wasserstein = copy.deepcopy(with_median_diff)
-    with_median_diff_and_wasserstein.include_wasserstein_distance = True
-    with_median_diff_and_wasserstein.code_name = "[NS NM NC][L SS DM WD NA][G3]"
+    kw_without_crossover = copy.deepcopy(known_winner)
+    kw_without_crossover.use_custom_crossover_operator = False
 
+    kw_with_auto_gt = copy.deepcopy(known_winner)
+    kw_with_auto_gt.genome_threshold = "auto"
 
-    configs = [baseline,
-               with_new_atomicity,
-               with_genome_3, with_genome_4, with_genome_5,
-               with_ss,
-               with_median_diff,
-               with_median_diff_and_wasserstein]
+    kw_with_g4 = copy.deepcopy(known_winner)
+    kw_with_g4.genome_threshold = 4
 
+    kw_with_g5 = copy.deepcopy(known_winner)
+    kw_with_g5.genome_threshold = 5
+
+    configs = [known_winner,
+               kw_withough_ps_len, kw_without_sample_quantity, kw_without_mean_fitness, kw_without_atomicity,
+               kw_without_sampling, kw_without_mutation, kw_without_crossover,
+               kw_with_auto_gt, kw_with_g4, kw_with_g5]
+
+    for config in configs:
+        config.auto_fill_code()
+
+    old_atomicity_metric = None
+    if any(not settings.use_custom_atomicity for settings in configs):
+        old_atomicity_metric = GlobalLinkageBasedOnMutualInformation()
+        old_atomicity_metric.set_pRef(train_pRef)
 
     collected_data = []
     for config in configs:
@@ -103,17 +165,19 @@ def run():
             result_json = results_to_json(result, search_settings=config,
                                           test_session_data=test_SPRef)
             collected_data.append({"config": settings_json,
-                    "results": result_json})
+                                   "results": result_json})
         except Exception as e:
-            collected_data.append({"confid": settings_json,
+            collected_data.append({"config": settings_json,
                                    "error": repr(e)})
 
-
-    destination_file = os.path.join(destination_path, "run_"+utils.get_formatted_timestamp()+"_"+repr(random.randrange(1000))+".json")
+    destination_file = os.path.join(destination_path, "run_" + utils.get_formatted_timestamp() + "_" + repr(
+        random.randrange(1000)) + ".json")
     with utils.open_and_make_directories(destination_file) as file:
         json.dump(collected_data, file)
 
     print("All done!")
+
+
 #
 #
 # async def main():
@@ -122,7 +186,6 @@ def run():
 #
 # asyncio.run(main())
 #
-
 
 
 def main():

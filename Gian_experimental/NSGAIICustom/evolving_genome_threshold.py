@@ -111,8 +111,8 @@ class SimpleMutateGT(AlsoMutateGT):
 class AlsoCrossoverGT(NCCrossover):
     original_crossover: NCCrossover
 
-    def __init__(self, original_mutation: NCCrossover):
-        self.original_crossover = original_mutation
+    def __init__(self, original_crossover: NCCrossover):
+        self.original_crossover = original_crossover
         super().__init__()
 
     def crossed_gt(self, a: NCSolutionWithGT, b: NCSolutionWithGT) -> (int, int):
@@ -241,4 +241,4 @@ def check():
         print(result)
 
 
-check()
+#check()
