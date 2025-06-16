@@ -1,12 +1,12 @@
 import random
 from collections import defaultdict
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable, Optional, TypeAlias
 
 import numpy as np
 
 import utils
 
-NCSolution = set[int]
+NCSolution: TypeAlias = set[int]
 
 
 class EvaluatedNCSolution:
@@ -48,15 +48,19 @@ class NCSampler:
 
 class NCSamplerSimple(NCSampler):
     probabilities: np.ndarray
+    allow_empty: bool
 
-    def __init__(self, probabilities: np.ndarray):
+    def __init__(self,
+                 probabilities: np.ndarray,
+                 allow_empty: bool = False):
         super().__init__()
         self.probabilities = probabilities
+        self.allow_empty = allow_empty
 
     @classmethod
-    def with_average_quantity(cls, quantity: float, genome_size: int):
+    def with_average_quantity(cls, quantity: float, genome_size: int, allow_empty: bool = False):
         probabilities = np.ones(genome_size) * quantity / genome_size
-        return cls(probabilities)
+        return cls(probabilities, allow_empty)
 
     @classmethod
     def equal_probability(cls, n):
@@ -64,7 +68,12 @@ class NCSamplerSimple(NCSampler):
         return cls(probabilities)
 
     def sample(self) -> NCSolution:
-        return sample_from_probabilities(self.probabilities)
+        produced = sample_from_probabilities(self.probabilities)
+
+        # we don't want empty solutions
+        if len(produced) == 0 and not self.allow_empty:
+            produced.add(random.choice(range(len(self.probabilities))))
+        return produced
 
 
 class NCMutation:

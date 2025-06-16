@@ -13,22 +13,28 @@ def hot_encode_and_multiply(solution: NCSolution, transition_matrix: np.ndarray)
     hot_encoded[list(solution)] = 1
     return hot_encoded.reshape((1, -1)) @ transition_matrix
 
+
 class NCSamplerFromPRef(NCSampler):
     probabilities_of_existing: np.ndarray
+    allow_empty: bool
 
-    def __init__(self, probabilities_of_existing: np.ndarray):
+    def __init__(self, probabilities_of_existing: np.ndarray, allow_empty: bool):
         super().__init__()
         self.probabilities_of_existing = probabilities_of_existing
         self.probabilities_of_existing = scale_to_have_sum(self.probabilities_of_existing, wanted_sum=4)
+        self.allow_empty = allow_empty
 
     def sample(self) -> NCSolution:
-        return sample_from_probabilities(self.probabilities_of_existing)
+        produced = sample_from_probabilities(self.probabilities_of_existing)
+        if len(produced) == 0 and not self.allow_empty:
+            produced.add(random.choice(range(self.probabilities_of_existing)))
+        return produced
 
     @classmethod
-    def from_PRef(cls, pRef: PRef):
+    def from_PRef(cls, pRef: PRef, allow_empty: bool = False):
         # assumes that pRef is boolean
         probabilities = np.average(pRef.full_solution_matrix, axis=0)
-        return cls(probabilities)
+        return cls(probabilities, allow_empty=allow_empty)
 
 
 class NCMutationCounterproductive(NCMutation):
@@ -43,7 +49,7 @@ class NCMutationCounterproductive(NCMutation):
     def mutated(self, solution: NCSolution) -> NCSolution:
         probabilities = hot_encode_and_multiply(solution, self.transition_matrix)
         probabilities = probabilities.ravel()
-        disappearance_probability = 1/len(solution) if len(solution) > 0 else 0 # TODO document this
+        disappearance_probability = 1 / len(solution) if len(solution) > 0 else 0  # TODO document this
         # probabilities = scale_to_have_sum_and_max(probabilities,
         #                                           wanted_sum=len(solution),
         #                                           wanted_max=1 - disappearance_probability,
