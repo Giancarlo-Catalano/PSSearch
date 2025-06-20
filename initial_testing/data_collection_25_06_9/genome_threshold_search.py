@@ -175,8 +175,6 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
     quantity_of_objectives = search_settings.get_quantity_of_objectives()
 
     def get_metrics(ps: NCSolution) -> tuple[float]:
-        if ps.genome_threshold == "auto":
-            raise NotImplementedError()
         matching, non_matching = optimised_session_data.partition(ps, threshold=ps.genome_threshold)
         len_m, len_nm = len(matching), len(non_matching)
 

@@ -35,66 +35,6 @@ def run():
     print("Starting data collection")
     evaluation_budget = 10000
 
-    # baseline = PolishSearchSettings(code_name="baseline",
-    #                                 population_size=100,
-    #                                 evaluation_budget=evaluation_budget,
-    #                                 cluster_info_file_name=cluster_info_file_name,
-    #                                 include_ps_len=True,
-    #                                 include_mean_fitness=True,
-    #                                 include_atomicity=True,
-    #                                 use_custom_atomicity=False,
-    #                                 genome_threshold=None,
-    #                                 )
-    # baseline.auto_fill_code()
-    #
-    # with_new_atomicity = copy.deepcopy(baseline)
-    # with_new_atomicity.use_custom_atomicity = True
-    # with_new_atomicity.auto_fill_code()
-    #
-    # with_ss = copy.deepcopy(with_new_atomicity)
-    # with_ss.include_sample_quantity = True
-    # with_ss.auto_fill_code()
-    #
-    # with_genome_3 = copy.deepcopy(with_new_atomicity)
-    # with_genome_3.genome_threshold = 3
-    # with_genome_3.use_custom_sampling_operator = True
-    # with_genome_3.use_custom_mutation_operator = True
-    # with_genome_3.use_custom_crossover_operator = True
-    # with_genome_3.auto_fill_code()
-    #
-    # with_genome_4 = copy.deepcopy(with_genome_3)
-    # with_genome_4.genome_threshold = 4
-    # with_genome_4.auto_fill_code()
-    #
-    # with_genome_5 = copy.deepcopy(with_genome_3)
-    # with_genome_5.genome_threshold = 5
-    # with_genome_5.auto_fill_code()
-    #
-    # with_auto_GT = copy.deepcopy(with_genome_3)
-    # with_auto_GT.genome_threshold = "auto"
-    # with_auto_GT.auto_fill_code()
-    #
-    # with_ss_and_G3 = copy.deepcopy(with_genome_3)
-    # with_ss_and_G3.include_sample_quantity = True
-    # with_ss_and_G3.auto_fill_code()
-    #
-    # with_ss_and_G4 = copy.deepcopy(with_genome_4)
-    # with_ss_and_G4.include_sample_quantity = True
-    # with_ss_and_G4.auto_fill_code()
-    #
-    # with_ss_and_G5 = copy.deepcopy(with_genome_5)
-    # with_ss_and_G5.include_sample_quantity = True
-    # with_ss_and_G5.auto_fill_code()
-    #
-    # with_median_diff = copy.deepcopy(with_ss_and_G3)
-    # with_median_diff.include_mean_fitness = False
-    # with_median_diff.include_diff_median = True
-    # with_median_diff.auto_fill_code()
-    #
-    # with_median_diff_and_wasserstein = copy.deepcopy(with_median_diff)
-    # with_median_diff_and_wasserstein.include_wasserstein_distance = True
-    # with_median_diff_and_wasserstein.auto_fill_code()
-
     known_winner = PolishSearchSettings(code_name="known_winner",
                                         population_size=200,
                                         evaluation_budget=evaluation_budget,
@@ -178,7 +118,7 @@ def run():
     print("All done!")
 
 
-#
+
 #
 # async def main():
 #     tasks = [asyncio.to_thread(run) for _ in range(12)]
