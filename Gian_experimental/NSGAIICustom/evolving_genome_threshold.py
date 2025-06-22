@@ -20,6 +20,13 @@ class NCSolutionWithGT(NCSolution):
     def without_gt(cls, solution: NCSolution):
         return cls(solution, genome_threshold=len(solution))
 
+    def __eq__(self, other):
+        return (super().__eq__(other)) and (self.genome_threshold == other.genome_threshold)
+
+
+    def __hash__(self):
+        return hash(sum(self) + self.genome_threshold)
+
 
 class SampleWithFixedGT(NCSampler):
     original_sampler: NCSampler

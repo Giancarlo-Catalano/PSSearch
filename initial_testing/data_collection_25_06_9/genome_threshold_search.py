@@ -12,7 +12,8 @@ from Gian_experimental.NSGAIICustom.CustomOperators import NCSamplerFromPRef, NC
     NCCrossoverTransition
 from Gian_experimental.NSGAIICustom.NSGAIICustom import EvaluatedNCSolution, NCSamplerSimple, NCMutationSimple, \
     NCCrossoverSimple, NCSolution, NSGAIICustom
-from Gian_experimental.NSGAIICustom.evolving_genome_threshold import SampleWithFixedGT, SimpleSampleGT, MutateExceptGT, SimpleMutateGT, SimpleCrossoverGT
+from Gian_experimental.NSGAIICustom.evolving_genome_threshold import SampleWithFixedGT, SimpleSampleGT, MutateExceptGT, \
+    SimpleMutateGT, SimpleCrossoverGT, NCSolutionWithGT
 from Gian_experimental.NSGAIICustom.testing_in_vitro.SPRef import SPRef, OptimisedSPref
 from PolishSystem.OperatorsBasedOnSimilarities.similarities_utils import gian_get_similarities, get_transition_matrix
 
@@ -105,31 +106,15 @@ class PolishSearchSettings:
         self.code_name = "".join([keywords_in_brackets(operator_keywords), keywords_in_brackets(metrics_keywords), keywords_in_brackets(genome_keywords)])
 
 
-class HashedSolution:
-    solution: NCSolution
-
-    def __init__(self,
-                 sol):
-        self.solution = sol
-
-    def __hash__(self):
-        return sum(self.solution) % 7787
-
-    def __eq__(self, other):
-        return self.solution == other.solution
-
-
 def make_metrics_cached(metrics):
     cached_values = dict()
 
-    def get_values(ps):
-        wrapped = HashedSolution(ps)
-        if wrapped in cached_values:
-            return cached_values[wrapped]
+    def get_values(ps: NCSolutionWithGT):
+        if ps in cached_values:
+            return cached_values[ps]
         else:
-
             value = metrics(ps)
-            cached_values[wrapped] = value
+            cached_values[ps] = value
             return value
 
     return get_values
@@ -242,7 +227,7 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
                              tournament_size=3,
                              mo_fitness_function=make_metrics_cached(get_metrics),
                              unique=True,
-                             verbose=False,
+                             verbose=True,
                              culler=tie_breaker)
 
 
