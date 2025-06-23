@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 import random
+from typing import Optional
 
 import utils
 from Core.PSMetric.Linkage.ValueSpecificMutualInformation import GlobalLinkageBasedOnMutualInformation
@@ -26,7 +27,8 @@ def print_to_error(*args, **kwargs):
 def single_data_collection_run(train_pRef,
                                train_SPRef,
                                list_of_configs,
-                               extra_info: dict):
+                               extra_info: dict,
+                               save_to_folder: Optional[str]):
 
     old_atomicity_metric = None
     if any(not settings.use_custom_atomicity for settings in list_of_configs):
@@ -55,5 +57,10 @@ def single_data_collection_run(train_pRef,
                     "data": collected_data,
                  }
 
-    print(json.dumps(to_output))
+    if save_to_folder is None:
+        print(json.dumps(to_output))
+    else:
+        file_name = os.path.join(save_to_folder, f"result_"+utils.get_formatted_timestamp()+".json")
+        with utils.open_and_make_directories(file_name) as file:
+            json.dump(to_output, file)
 

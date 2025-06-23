@@ -227,7 +227,7 @@ def search_for_pss_using_genome_threshold(train_session_data: PRef,
                              tournament_size=3,
                              mo_fitness_function=make_metrics_cached(get_metrics),
                              unique=True,
-                             verbose=True,
+                             verbose=False,
                              culler=tie_breaker)
 
 

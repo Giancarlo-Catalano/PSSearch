@@ -15,26 +15,31 @@ def run_data_collection_using_seed(seed):
 
     train_pRef, test_pRef = original_pRef.train_test_split(test_size=0.2, random_state=seed)
 
-    # sanity check to see if the split is consistent by seed
-    print(sum(train_pRef.fitness_array))
 
     optimised_train_SPref = OptimisedSPref.from_pRef(train_pRef)
 
     single_data_collection_run(train_pRef=train_pRef,
                                train_SPRef=optimised_train_SPref,
                                list_of_configs=configs,
-                               extra_info ={"version": "fallback_v1",
-                                            "seed": seed})
+                               extra_info = {"version": "fallback_v1",
+                                            "seed": seed},
+                               save_to_folder = r"C:\Users\gac8\PycharmProjects\PSSearch\retail_forecasting_data_collection\local_results")
 
+
+# def main():
+#     if len(sys.argv) > 1:
+#         try:
+#             number = int(sys.argv[1])
+#             run_data_collection_using_seed(number)
+#         except ValueError:
+#             print("Error: First argument must be an integer.")
+#     else:
+#         print("No command-line argument provided.")
 
 def main():
-    if len(sys.argv) > 1:
-        try:
-            number = int(sys.argv[1])
-            run_data_collection_using_seed(number)
-        except ValueError:
-            print("Error: First argument must be an integer.")
-    else:
-        print("No command-line argument provided.")
+    for i in range(100):
+        print("Iteration ", i)
+        run_data_collection_using_seed(i)
+
 
 main()

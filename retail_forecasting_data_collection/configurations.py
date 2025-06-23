@@ -4,7 +4,7 @@ from initial_testing.data_collection_25_06_9.genome_threshold_search import Poli
 from retail_forecasting_data_collection.data_file_names import cluster_info_path
 
 evaluation_budget = 10000
-population_size = 200
+population_size = 100
 
 known_winner = PolishSearchSettings(code_name="known_winner",
                                     population_size=population_size,
