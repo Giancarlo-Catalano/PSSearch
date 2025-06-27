@@ -23,7 +23,7 @@ def run_data_collection_using_seed(seed):
                                list_of_configs=configs,
                                extra_info = {"version": "fallback_v1",
                                             "seed": seed},
-                               save_to_folder = r"C:\Users\gac8\PycharmProjects\PSSearch\retail_forecasting_data_collection\local_results")
+                               save_to_folder = r"C:\Users\gac8\PycharmProjects\PSSearch\retail_forecasting_data_collection\local_results_without_gt")
 
 
 # def main():

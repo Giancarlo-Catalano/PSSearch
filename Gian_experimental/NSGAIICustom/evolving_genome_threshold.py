@@ -25,7 +25,7 @@ class NCSolutionWithGT(NCSolution):
 
 
     def __hash__(self):
-        return hash(sum(self) + self.genome_threshold)
+        return hash(sum(self) + (0 if self.genome_threshold is None else self.genome_threshold))
 
 
 class SampleWithFixedGT(NCSampler):

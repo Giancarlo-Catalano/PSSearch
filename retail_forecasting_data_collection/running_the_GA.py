@@ -14,7 +14,8 @@ from initial_testing.data_collection_25_06_9.genome_threshold_search import Poli
 
 
 def pss_to_json(list_of_pss):
-    return [{"pattern": list(ps.solution), "threshold": int(ps.solution.genome_threshold)}
+    return [{"pattern": list(ps.solution),
+             "threshold": int(ps.solution.genome_threshold) if ps.solution.genome_threshold is not None else None}
             for ps in list_of_pss]
 
 import sys
