@@ -6,6 +6,21 @@ from retail_forecasting_data_collection.data_file_names import cluster_info_path
 evaluation_budget = 10000
 population_size = 100
 
+baseline = PolishSearchSettings(code_name="baseline",
+                                    population_size=population_size,
+                                    evaluation_budget=evaluation_budget,
+                                    cluster_info_file_name=cluster_info_path,
+                                    include_ps_len=True,
+                                    include_sample_quantity=False,
+                                    include_mean_fitness=True,
+                                    include_atomicity=True,
+                                    use_custom_atomicity=True,
+                                    use_custom_sampling_operator=False,
+                                    use_custom_mutation_operator=False,
+                                    use_custom_crossover_operator=False,
+                                    genome_threshold=None,
+                                    )
+
 # known_winner = PolishSearchSettings(code_name="known_winner",
 #                                     population_size=population_size,
 #                                     evaluation_budget=evaluation_budget,
@@ -57,46 +72,44 @@ population_size = 100
 #            kw_with_auto_gt, kw_with_g4, kw_with_g5]
 
 
-known_winner_without_gt = PolishSearchSettings(code_name="known_winner_without_gt",
-                                               population_size=population_size,
-                                               evaluation_budget=evaluation_budget,
-                                               cluster_info_file_name=cluster_info_path,
-                                               include_ps_len=True,
-                                               include_sample_quantity=True,
-                                               include_mean_fitness=True,
-                                               include_atomicity=True,
-                                               use_custom_atomicity=True,
-                                               use_custom_sampling_operator=True,
-                                               use_custom_mutation_operator=True,
-                                               use_custom_crossover_operator=True,
-                                               genome_threshold=None,
-                                               )
+# known_winner_without_gt = PolishSearchSettings(code_name="known_winner_without_gt",
+#                                                population_size=population_size,
+#                                                evaluation_budget=evaluation_budget,
+#                                                cluster_info_file_name=cluster_info_path,
+#                                                include_ps_len=True,
+#                                                include_sample_quantity=True,
+#                                                include_mean_fitness=True,
+#                                                include_atomicity=True,
+#                                                use_custom_atomicity=True,
+#                                                use_custom_sampling_operator=True,
+#                                                use_custom_mutation_operator=True,
+#                                                use_custom_crossover_operator=True,
+#                                                genome_threshold=None,
+#                                                )
+#
+# kw_withough_ps_len_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_withough_ps_len_without_gt.include_ps_len = False
+#
+# kw_without_sample_quantity_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_sample_quantity_without_gt.include_sample_quantity = False
+#
+# kw_without_mean_fitness_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_mean_fitness_without_gt.include_mean_fitness = False
+#
+# kw_without_atomicity_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_atomicity_without_gt.include_atomicity = False
+#
+# kw_without_sampling_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_sampling_without_gt.use_custom_sampling_operator = False
+#
+# kw_without_mutation_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_mutation_without_gt.use_custom_mutation_operator = False
+#
+# kw_without_crossover_without_gt = copy.deepcopy(known_winner_without_gt)
+# kw_without_crossover_without_gt.use_custom_crossover_operator = False
 
-kw_withough_ps_len_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_withough_ps_len_without_gt.include_ps_len = False
 
-kw_without_sample_quantity_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_sample_quantity_without_gt.include_sample_quantity = False
-
-kw_without_mean_fitness_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_mean_fitness_without_gt.include_mean_fitness = False
-
-kw_without_atomicity_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_atomicity_without_gt.include_atomicity = False
-
-kw_without_sampling_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_sampling_without_gt.use_custom_sampling_operator = False
-
-kw_without_mutation_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_mutation_without_gt.use_custom_mutation_operator = False
-
-kw_without_crossover_without_gt = copy.deepcopy(known_winner_without_gt)
-kw_without_crossover_without_gt.use_custom_crossover_operator = False
-
-
-configs = [known_winner_without_gt,
-           kw_withough_ps_len_without_gt, kw_without_sample_quantity_without_gt, kw_without_mean_fitness_without_gt, kw_without_atomicity_without_gt,
-           kw_without_sampling_without_gt, kw_without_mutation_without_gt, kw_without_crossover_without_gt]
+configs = [baseline]
 
 for config in configs:
     config.auto_fill_code()
